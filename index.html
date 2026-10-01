@@ -8,58 +8,83 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
-  /* ===== Tokens de cor (tema claro / escuro) ===== */
   :root {
     --page: #e7e1f3; --text: #2a1d45; --muted: #5d4f7a;
-    --money: #3fd47a; --danger: #e8433a; --ink: #fff6e6; --panel: rgba(24,14,44,.82);
+    --money: #3fd47a; --danger: #e8433a; --ink: #fff6e6; --panel: rgba(24,14,44,.86);
     box-sizing: border-box;
     padding-top: env(safe-area-inset-top, 0px);
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) { --page: #120b22; --text: #efe7ff; --muted: #a596c4; }
-  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --page: #120b22; --text: #efe7ff; --muted: #a596c4; } }
   :root[data-theme="dark"] { --page: #120b22; --text: #efe7ff; --muted: #a596c4; }
   *, *::before, *::after { box-sizing: inherit; }
   html { height: 100%; scroll-padding-top: env(safe-area-inset-top, 0px); }
-  body {
-    margin: 0; min-height: 100%; background: var(--page); color: var(--text);
-    font-family: "Press Start 2P", ui-monospace, "Courier New", monospace;
-    display: flex; justify-content: center;
-  }
+  body { margin: 0; min-height: 100%; background: var(--page); color: var(--text);
+         font-family: "Press Start 2P", ui-monospace, "Courier New", monospace; display: flex; justify-content: center; }
   .wrap { width: 100%; max-width: 980px; padding: 12px; display: flex; flex-direction: column; gap: 12px; }
-
-  /* ===== Palco do jogo ===== */
   .stage { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 6px; overflow: hidden;
-           box-shadow: 0 0 0 4px #2a1d45, 0 10px 30px rgba(20,8,40,.35); background: #1e1436; }
+           box-shadow: 0 0 0 4px #2a1d45, 0 10px 30px rgba(20,8,40,.35); background: #1e1436; user-select: none; -webkit-user-select: none; }
   canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .hidden { display: none !important; }
 
+  /* HUD */
   .hud { position: absolute; inset: 0; pointer-events: none; display: flex; justify-content: space-between;
          align-items: flex-start; padding: 2.2% 2.6%; color: var(--ink); text-shadow: 2px 2px 0 #1a0f2e; }
   #money { font-size: clamp(12px, 2.6vw, 26px); color: var(--money); }
   .small { font-size: clamp(7px, 1.2vw, 12px); margin-top: .6em; opacity: .9; }
   .hud-right { text-align: right; }
   .meter { display: flex; gap: 4px; justify-content: flex-end; margin-top: .5em; }
-  .meter span { width: clamp(8px, 1.6vw, 16px); aspect-ratio: 1; background: rgba(255,255,255,.18);
-                box-shadow: inset 0 0 0 2px #1a0f2e; }
+  .meter span { width: clamp(8px, 1.6vw, 16px); aspect-ratio: 1; background: rgba(255,255,255,.18); box-shadow: inset 0 0 0 2px #1a0f2e; }
   .meter span.on { background: var(--danger); }
 
-  .screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
-            justify-content: center; gap: 1.2em; text-align: center; padding: 4%;
-            background: var(--panel); color: var(--ink); }
-  .screen.hidden { display: none; }
-  .screen h1 { margin: 0; font-size: clamp(20px, 5.5vw, 52px); color: #ffd23f; text-shadow: 4px 4px 0 #b2456b; line-height: 1.2; }
-  .screen h2 { margin: 0; font-size: clamp(14px, 3.2vw, 30px); color: #ffd23f; text-shadow: 3px 3px 0 #b2456b; }
+  /* Telas */
+  .screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 1.2em; text-align: center; padding: 4%; background: var(--panel); color: var(--ink); }
+  .screen h2 { margin: 0; font-size: clamp(14px, 3.2vw, 30px); color: #ffd23f; text-shadow: 3px 3px 0 #b2456b; line-height: 1.3; }
   .screen p { margin: 0; font-size: clamp(8px, 1.5vw, 14px); line-height: 1.8; max-width: 38em; }
   .screen strong { color: var(--money); font-weight: normal; }
+  .screen.poster { background: linear-gradient(to bottom, transparent 55%, rgba(16,10,30,.92) 100%); justify-content: flex-end; padding-bottom: 3%; }
+  .menu-botoes { display: flex; gap: 1em; flex-wrap: wrap; justify-content: center; }
   .btn { font: inherit; font-size: clamp(10px, 1.8vw, 16px); padding: .9em 1.6em; border: 0; cursor: pointer;
          background: #ffd23f; color: #2a1d45; box-shadow: 4px 4px 0 #b2456b; }
-  .btn:hover { background: #ffe07a; }
+  .btn.sec { background: #2a1d45; color: #ffd23f; box-shadow: 4px 4px 0 #120b22; }
+  .btn:hover { filter: brightness(1.12); }
   .btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #b2456b; }
-  .btn:focus-visible, .pad:focus-visible { outline: 3px solid #ffffff; outline-offset: 3px; }
+  .btn:focus-visible, .pad:focus-visible, .icon:focus-visible { outline: 3px solid #ffffff; outline-offset: 3px; }
+  .best { color: #ffe9a0; text-shadow: 2px 2px 0 #120b22; }
 
-  /* ===== Controles de toque (só aparecem em telas de toque) ===== */
-  .touch { display: none; justify-content: space-between; gap: 12px; user-select: none; -webkit-user-select: none; }
+  /* Contagem e textos grandes */
+  .big { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none;
+         font-size: clamp(28px, 9vw, 90px); color: #ffd23f; text-shadow: 4px 4px 0 #b2456b, 0 0 24px rgba(255,95,168,.6); text-align: center; }
+  .big.texto { font-size: clamp(16px, 4.6vw, 44px); color: #6ff3ff; text-shadow: 3px 3px 0 #2a1d45, 0 0 20px rgba(111,243,255,.7); }
+  .big.boom { font-size: clamp(22px, 7vw, 70px); color: #ffd23f; text-shadow: 4px 4px 0 #e8433a, 8px 8px 0 #2a1d45; }
+  .big span { animation: pop .7s ease-out both; }
+  @keyframes pop { from { transform: scale(1.8); opacity: 0; } 30% { transform: scale(1); opacity: 1; } to { transform: scale(.95); opacity: 1; } }
+
+  /* Intro */
+  .intro { position: absolute; inset: 0; cursor: pointer; }
+  .cena-titulo { position: absolute; left: 2.6%; top: 3%; font-size: clamp(7px, 1.3vw, 12px); color: #ffe9a0;
+                 background: rgba(16,10,30,.75); padding: .7em 1em; }
+  .balao { position: absolute; top: 14%; max-width: 54%; background: #fff6e6; color: #2a1d45; padding: 1em 1.2em;
+           font-size: clamp(8px, 1.45vw, 14px); line-height: 1.7; box-shadow: 4px 4px 0 #2a1d45; }
+  .balao::after { content: ""; position: absolute; bottom: -12px; width: 0; height: 0; border: 12px solid transparent; border-bottom: 0; border-top-color: #fff6e6; }
+  .balao.esq { left: 4%; } .balao.esq::after { left: 18%; }
+  .balao.dir { right: 4%; } .balao.dir::after { right: 18%; }
+  .balao .quem { display: block; font-size: .8em; margin-bottom: .6em; }
+  .balao.esq .quem { color: #8a2a3a; } .balao.dir .quem { color: #c06a10; }
+  .dica { position: absolute; right: 2.6%; bottom: 3%; font-size: clamp(6px, 1.1vw, 10px); color: #fff6e6; opacity: .85;
+          text-shadow: 2px 2px 0 #120b22; }
+  .pular { position: absolute; right: 2.6%; top: 3%; font-size: clamp(7px, 1.2vw, 12px); padding: .7em 1em; }
+  .objetivo { cursor: default; }
+  .intro:focus { outline: none; }
+
+  /* Botão de som */
+  .icon { position: absolute; left: 2.2%; bottom: 3%; font: inherit; font-size: clamp(12px, 2vw, 18px); width: 2.2em; height: 2.2em;
+          border: 0; background: rgba(16,10,30,.7); color: #fff6e6; cursor: pointer; box-shadow: 2px 2px 0 #120b22; }
+
+  /* Controles de toque */
+  .touch { display: none; justify-content: space-between; gap: 12px; }
   @media (hover: none) and (pointer: coarse) { .touch { display: flex; } .help { display: none; } }
   .touch .group { display: flex; gap: 12px; }
   .pad { font: inherit; font-size: 18px; width: 72px; height: 72px; border: 0; border-radius: 50%;
@@ -68,17 +93,7 @@
   .pad.pressed { transform: translateY(3px); box-shadow: 0 1px 0 #120b22; }
   .help { margin: 0; font-size: 10px; line-height: 1.9; color: var(--muted); text-align: center; }
 
-  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  .screen.poster { background: linear-gradient(to bottom, transparent 55%, rgba(16,10,30,.9) 100%); justify-content: flex-end; padding-bottom: 3%; }
-  .poster-bottom { display: flex; flex-direction: column; align-items: center; gap: .9em; }
-  .poster-bottom p { text-shadow: 2px 2px 0 #120b22; }
-  .countdown { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none;
-               font-size: clamp(28px, 9vw, 90px); color: #ffd23f; text-shadow: 4px 4px 0 #b2456b, 0 0 24px rgba(255,95,168,.6); text-align: center; }
-  .countdown.texto { font-size: clamp(16px, 4.6vw, 44px); color: #6ff3ff; text-shadow: 3px 3px 0 #2a1d45, 0 0 20px rgba(111,243,255,.7); }
-  .countdown.hidden { display: none; }
-  .countdown span { animation: pop .7s ease-out both; }
-  @keyframes pop { from { transform: scale(1.8); opacity: 0; } 30% { transform: scale(1); opacity: 1; } to { transform: scale(.95); opacity: 1; } }
-  @media (prefers-reduced-motion: reduce) { .countdown span { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .big span { animation: none; } }
 </style>
 </head>
 <body>
@@ -86,7 +101,7 @@
   <div class="stage" id="stage">
     <canvas id="game" width="320" height="180" aria-label="Jogo Mano Miau: o tigre corre por uma rua antiga fugindo do Don Larápio"></canvas>
 
-    <div class="hud" aria-live="off">
+    <div class="hud hidden" id="hud">
       <div>
         <div id="money">R$ 0,00</div>
         <div class="small" id="bestHud">Recorde R$ 0,00</div>
@@ -97,15 +112,38 @@
       </div>
     </div>
 
-    <div class="screen poster" id="startScreen">
+    <!-- Abertura: precisa de um toque para liberar o som no navegador -->
+    <div class="screen" id="splashScreen">
+      <h2>Mano Miau</h2>
+      <p>Uma história de dinheiro voando e um vilão de chapéu.</p>
+      <button class="btn" id="splashBtn">Começar</button>
+    </div>
+
+    <!-- Intro -->
+    <div class="intro hidden" id="introLayer" role="dialog" aria-label="História de abertura" tabindex="-1">
+      <div class="cena-titulo hidden" id="cenaTitulo"></div>
+      <div class="balao hidden" id="balao" aria-live="polite"><span class="quem" id="balaoQuem"></span><span id="balaoTxt"></span></div>
+      <div class="big boom hidden" id="boom"></div>
+      <div class="screen objetivo hidden" id="objetivo">
+        <h2>Objetivo</h2>
+        <p>Corra pelas ruas com o Mano Miau recolhendo as moedas e cédulas do cassino antes que o Don Larápio te alcance!</p>
+        <button class="btn" id="irMenuBtn">Ir para o menu</button>
+      </div>
+      <div class="dica" id="dica">Toque ou aperte espaço para continuar</div>
+      <button class="btn sec pular" id="pularBtn">Pular intro</button>
+    </div>
+
+    <!-- Menu -->
+    <div class="screen poster hidden" id="menuScreen">
       <h1 class="sr-only">Mano Miau: foge do Don Larápio</h1>
-      <div class="poster-bottom">
+      <p class="best" id="menuBest"></p>
+      <div class="menu-botoes">
         <button class="btn" id="startBtn">Jogar</button>
-        <p id="startBest"></p>
+        <button class="btn sec" id="introBtn">Ver intro</button>
       </div>
     </div>
 
-    <div class="countdown hidden" id="countdown" aria-live="assertive"></div>
+    <div class="big hidden" id="countdown" aria-live="assertive"></div>
 
     <div class="screen hidden" id="pauseScreen">
       <h2>Pausado</h2>
@@ -116,8 +154,13 @@
       <h2>O Don Larápio te pegou!</h2>
       <p>Você juntou <strong id="finalMoney">R$ 0,00</strong></p>
       <p id="recordMsg"></p>
-      <button class="btn" id="againBtn">Jogar de novo</button>
+      <div class="menu-botoes">
+        <button class="btn" id="againBtn">Jogar de novo</button>
+        <button class="btn sec" id="menuBtn">Menu</button>
+      </div>
     </div>
+
+    <button class="icon hidden" id="somBtn" aria-pressed="true" aria-label="Som ligado">♪</button>
   </div>
 
   <div class="touch" id="touch">
@@ -128,10 +171,10 @@
     <button class="pad jump" data-key="jump" aria-label="Pular">Pular</button>
   </div>
 
-  <p class="help">Setas ← → para andar, ↑ ou espaço para pular, P para pausar</p>
+  <p class="help">Setas ← → para andar, ↑ ou espaço para pular, P para pausar, M liga ou desliga o som</p>
 </main>
 <script>
-const SPRITES = {"pal": {"k": "#24120a", "o": "#f49828", "d": "#c46816", "w": "#fff4e0", "W": "#e0ccaa", "b": "#3462d6", "B": "#1c3a8c", "g": "#c8d2de", "m": "#50dcff", "M": "#9664ff", "r": "#e43a2e", "R": "#a0221c", "x": "#221c28", "n": "#f08296", "K": "#18181e", "h": "#464654", "f": "#e2aa80", "F": "#b8805c", "G": "#0c0c10", "l": "#5a6478", "S": "#383a42", "T": "#26282e", "U": "#545660", "s": "#fafafa", "u": "#c4c4cc", "c": "#96969c", "e": "#46281e", "z": "#82828c"}, "tigre": {"corre": [["..........kkkkkkk.........", "........kkbbbbbbbkk.......", ".......kbbbbbbbbbbbk......", "....kkkbbbbbbbbbbbbbk.....", "...kBBBBkbbbbbbbbbbbk.kk..", "....kkkkkkkkkkkkkkkkkkok..", "......kooookooookoooook...", "......kooooooooooooooook..", ".....kogggggggogggggggok..", ".....kogmmMmmgggmmMmmgk...", ".....kogmmmmMg.kgmmmmgk...", "......kogggggoookgggggk...", "......kdoooooowwwwwwwnk...", "......kdkoooowwwwwwwwwk...", ".......kdkooowwwkkkwwk....", "........kkwwwwwwwwwwk.....", ".......kkrrrrrrrrrrrkk....", "......kxxxxxxxxxxxxxxxk...", ".....korrrrrrrrrrrrrrrok..", "....kooxxxxxxxxxxxxxxxook.", "....kokrrrrrrrrrrrrrrrkok.", "....kowkxxxxxxxxxxxxxkwok.", ".....kwkrrrrrrrrrrrrrkwk..", "......kkxxxxxxxxxxxxxkk...", "........kwwwwwwwwwwwk.....", "........kokwwwwwwwkok.....", "........kookkkkkkkook.....", ".......kookk.....kkook....", ".......kwwwk.....kwwwk....", "........kkk.......kkk....."], ["..........kkkkkkk.........", "........kkbbbbbbbkk.......", ".......kbbbbbbbbbbbk......", "....kkkbbbbbbbbbbbbbk.....", "...kBBBBkbbbbbbbbbbbk.kk..", "....kkkkkkkkkkkkkkkkkkok..", "......kooookooookoooook...", "......kooooooooooooooook..", ".....kogggggggogggggggok..", ".....kogmmMmmgggmmMmmgk...", ".....kogmmmmMg.kgmmmmgk...", "......kogggggoookgggggk...", "......kdoooooowwwwwwwnk...", "......kdkoooowwwwwwwwwk...", ".......kdkooowwwkkkwwk....", "........kkwwwwwwwwwwk.....", ".......kkrrrrrrrrrrrkk....", "......kxxxxxxxxxxxxxxxk...", ".....korrrrrrrrrrrrrrrok..", "....kooxxxxxxxxxxxxxxxook.", "....kokrrrrrrrrrrrrrrrkok.", "....kowkxxxxxxxxxxxxxkwok.", ".....kwkrrrrrrrrrrrrrkwk..", "......kkxxxxxxxxxxxxxkk...", "........kwwwwwwwwwwwk.....", "........kokwwwwwwwkok.....", "........kooookkkookk......", ".........kook..kooook.....", "........kwwwk...kwwwk.....", ".........kkk.....kkk......"]], "pulo": ["..........kkkkkkk.........", "........kkbbbbbbbkk.......", ".......kbbbbbbbbbbbk......", "....kkkbbbbbbbbbbbbbk.....", "...kBBBBkbbbbbbbbbbbk.kk..", "....kkkkkkkkkkkkkkkkkkok..", "......kooookooookoooook...", "......kooooooooooooooook..", ".....kogggggggogggggggok..", ".....kogmmMmmgggmmMmmgk...", ".....kogmmmmMg.kgmmmmgk...", "......kogggggoookgggggk...", "......kdoooooowwwwwwwnk...", "......kdkoooowwwwwwwwwk...", ".......kdkooowwwkkkwwk....", "........kkwwwwwwwwwwk.....", ".......kkrrrrrrrrrrrkk....", "......kxxxxxxxxxxxxxxxk...", ".....korrrrrrrrrrrrrrrok..", "....kooxxxxxxxxxxxxxxxook.", "....kokrrrrrrrrrrrrrrrkok.", "....kowkxxxxxxxxxxxxxkwok.", ".....kwkrrrrrrrrrrrrrkwk..", "......kkxxxxxxxxxxxxxkk...", "........kwwwwwwwwwwwk.....", "........kokwwwwwwwkok.....", "........kooook.kooook.....", ".........kwwwwkwwwwk......", "..........kkk..kkk........", ".........................."]}, "larapio": [["........kkkkkk........", ".......kKKKKKKk.......", "......kKKKKKKKKk......", "......kKKKKKKKKk......", "......khhhhhhhhk......", "..kkkkKKKKKKKKKKkkkk..", ".kKKKKKKKKKKKKKKKKKKk.", "..kkkkkkkkkkkkkkkkkk..", "......kczfffffffk.....", "......kGGGGflGGGGk....", "......kGGGGkfGGGGk....", "......kffffffFfffk....", "......kfffffFFffffk...", "......kfeeeeeeeefk....", "......kffeeffeeffk....", ".......kfffkkfffk.....", "........kffffffk......", ".....kkkkSSSSSSSkkk...", "....kSSSSSuurruSSSSSk.", "...kSSUSSSSurrSSSSUSk.", "...kSSUSSTSSrrSSTSSUSk", "...kSSSUSSTSrrSTSSUSSk", "...kSSSSSSSTkTSSSSSSk.", "..kfkSSSSSSSkSSSSSSkfk", "..kfkSSSSSSSkSSSSSSkfk", "...kkTTTTTTTTTTTTTTkk.", "....kTTTTTTTkTTTTTTk..", "....kTTTTTTk.kTTTTTk..", "....kTTTTTk...kTTTTk..", "....kTTTTTk...kTTTTk..", "....kTTTTk.....kTTTk..", "...kTTTTk......kTTTTk.", "...kKKKKk.....kKKKKKk.", "..kKKKKKk.....kKKKKKKk", "..kkkkkk.......kkkkkk.", "......................"], ["........kkkkkk........", ".......kKKKKKKk.......", "......kKKKKKKKKk......", "......kKKKKKKKKk......", "......khhhhhhhhk......", "..kkkkKKKKKKKKKKkkkk..", ".kKKKKKKKKKKKKKKKKKKk.", "..kkkkkkkkkkkkkkkkkk..", "......kczfffffffk.....", "......kGGGGflGGGGk....", "......kGGGGkfGGGGk....", "......kffffffFfffk....", "......kfffffFFffffk...", "......kfeeeeeeeefk....", "......kffeeffeeffk....", ".......kfffkkfffk.....", "........kffffffk......", ".....kkkkSSSSSSSkkk...", "....kSSSSSuurruSSSSSk.", "...kSSUSSSSurrSSSSUSk.", "...kSSUSSTSSrrSSTSSUSk", "...kSSSUSSTSrrSTSSUSSk", "...kSSSSSSSTkTSSSSSSk.", "..kfkSSSSSSSkSSSSSSkfk", "..kfkSSSSSSSkSSSSSSkfk", "....kTTTTTTTTTTTTTTk..", ".....kTTTTTTkTTTTTk...", "......kTTTTTkTTTTk....", ".......kTTTTkTTTk.....", "........kTTTTTTTk.....", "........kTTTkTTTk.....", ".......kTTTk.kTTk.....", "......kKKKKk.kKKKk....", ".....kKKKKKk.kKKKKk...", ".....kkkkkk...kkkkk...", "......................"]]};
+const SPRITES = {"pal": {"k": "#24120a", "o": "#f49828", "d": "#c46816", "w": "#fff4e0", "W": "#e0ccaa", "b": "#3462d6", "B": "#1c3a8c", "g": "#c8d2de", "m": "#50dcff", "M": "#9664ff", "r": "#e43a2e", "R": "#a0221c", "x": "#221c28", "n": "#f08296", "K": "#18181e", "h": "#464654", "f": "#e2aa80", "F": "#b8805c", "G": "#0c0c10", "l": "#5a6478", "S": "#383a42", "T": "#26282e", "U": "#545660", "s": "#fafafa", "u": "#c4c4cc", "c": "#96969c", "e": "#46281e", "z": "#82828c"}, "tigre": {"corre": [["..........kkkkkkk.........", "........kkbbbbbbbkk.......", ".......kbbbbbbbbbbbk......", "....kkkbbbbbbbbbbbbbk.....", "...kBBBBkbbbbbbbbbbbk.kk..", "....kkkkkkkkkkkkkkkkkkok..", "......kooookooookoooook...", "......kooooooooooooooook..", ".....koGGGGGGGoGGGGGGGok..", ".....koGGuGGGGGGuGGGGGk...", ".....koGGGGGGG.kGGGGGGk...", "......koGGGGGoookGGGGGk...", "......kdoooooowwwwwwwnk...", "......kdkoooowwwwwwwwwk...", ".......kdkooowwwkkkwwk....", "........kkwwwwwwwwwwk.....", ".......kkrrrrrrrrrrrkk....", "......kxxxxxxxxxxxxxxxk...", ".....korrrrrrrrrrrrrrrok..", "....kooxxxxxxxxxxxxxxxook.", "....kokrrrrrrrrrrrrrrrkok.", "....kowkxxxxxxxxxxxxxkwok.", ".....kwkrrrrrrrrrrrrrkwk..", "......kkxxxxxxxxxxxxxkk...", "........kwwwwwwwwwwwk.....", "........kokwwwwwwwkok.....", "........kookkkkkkkook.....", ".......kookk.....kkook....", ".......kwwwk.....kwwwk....", "........kkk.......kkk....."], ["..........kkkkkkk.........", "........kkbbbbbbbkk.......", ".......kbbbbbbbbbbbk......", "....kkkbbbbbbbbbbbbbk.....", "...kBBBBkbbbbbbbbbbbk.kk..", "....kkkkkkkkkkkkkkkkkkok..", "......kooookooookoooook...", "......kooooooooooooooook..", ".....koGGGGGGGoGGGGGGGok..", ".....koGGuGGGGGGuGGGGGk...", ".....koGGGGGGG.kGGGGGGk...", "......koGGGGGoookGGGGGk...", "......kdoooooowwwwwwwnk...", "......kdkoooowwwwwwwwwk...", ".......kdkooowwwkkkwwk....", "........kkwwwwwwwwwwk.....", ".......kkrrrrrrrrrrrkk....", "......kxxxxxxxxxxxxxxxk...", ".....korrrrrrrrrrrrrrrok..", "....kooxxxxxxxxxxxxxxxook.", "....kokrrrrrrrrrrrrrrrkok.", "....kowkxxxxxxxxxxxxxkwok.", ".....kwkrrrrrrrrrrrrrkwk..", "......kkxxxxxxxxxxxxxkk...", "........kwwwwwwwwwwwk.....", "........kokwwwwwwwkok.....", "........kooookkkookk......", ".........kook..kooook.....", "........kwwwk...kwwwk.....", ".........kkk.....kkk......"]], "pulo": ["..........kkkkkkk.........", "........kkbbbbbbbkk.......", ".......kbbbbbbbbbbbk......", "....kkkbbbbbbbbbbbbbk.....", "...kBBBBkbbbbbbbbbbbk.kk..", "....kkkkkkkkkkkkkkkkkkok..", "......kooookooookoooook...", "......kooooooooooooooook..", ".....koGGGGGGGoGGGGGGGok..", ".....koGGuGGGGGGuGGGGGk...", ".....koGGGGGGG.kGGGGGGk...", "......koGGGGGoookGGGGGk...", "......kdoooooowwwwwwwnk...", "......kdkoooowwwwwwwwwk...", ".......kdkooowwwkkkwwk....", "........kkwwwwwwwwwwk.....", ".......kkrrrrrrrrrrrkk....", "......kxxxxxxxxxxxxxxxk...", ".....korrrrrrrrrrrrrrrok..", "....kooxxxxxxxxxxxxxxxook.", "....kokrrrrrrrrrrrrrrrkok.", "....kowkxxxxxxxxxxxxxkwok.", ".....kwkrrrrrrrrrrrrrkwk..", "......kkxxxxxxxxxxxxxkk...", "........kwwwwwwwwwwwk.....", "........kokwwwwwwwkok.....", "........kooook.kooook.....", ".........kwwwwkwwwwk......", "..........kkk..kkk........", ".........................."], "intro": ["..........kkkkkkk.........", "........kkbbbbbbbkk.......", ".......kbbbbbbbbbbbk......", "....kkkbbbbbbbbbbbbbk.....", "...kBBBBkbbbbbbbbbbbk.kk..", "....kkkkkkkkkkkkkkkkkkok..", "......kGGuGGGkGGuGGGGok...", "......kGGGGGkoGGGGGGok....", ".....kooooooooooooooook...", ".....kookxxoooooooxxook...", ".....kookwxooooooowxook...", "......koooooooooooooook...", "......kdoooooowwwwwwwnk...", "......kdkoooowwwwwwwwwk...", ".......kdkooowwwkkkwwk....", "........kkwwwwwwwwwwk.....", ".......kkrrrrrrrrrrrkk....", "......kxxxxxxxxxxxxxxxk...", ".....korrrrrrrrrrrrrrrok..", "....kooxxxxxxxxxxxxxxxook.", "....kokrrrrrrrrrrrrrrrkok.", "....kowkxxxxxxxxxxxxxkwok.", ".....kwkrrrrrrrrrrrrrkwk..", "......kkxxxxxxxxxxxxxkk...", "........kwwwwwwwwwwwk.....", "........kokwwwwwwwkok.....", "........kookkkkkkkook.....", ".......kookk.....kkook....", ".......kwwwk.....kwwwk....", "........kkk.......kkk....."]}, "larapio": [["........kkkkkk........", ".......kKKKKKKk.......", "......kKKKKKKKKk......", "......kKKKKKKKKk......", "......khhhhhhhhk......", "..kkkkKKKKKKKKKKkkkk..", ".kKKKKKKKKKKKKKKKKKKk.", "..kkkkkkkkkkkkkkkkkk..", "......kczfffffffk.....", "......kGGGGflGGGGk....", "......kGGGGkfGGGGk....", "......kffffffFfffk....", "......kfffffFFffffk...", "......kfeeeeeeeefk....", "......kffeeffeeffk....", ".......kfffkkfffk.....", "........kffffffk......", ".....kkkkSSSSSSSkkk...", "....kSSSSSuurruSSSSSk.", "...kSSUSSSSurrSSSSUSk.", "...kSSUSSTSSrrSSTSSUSk", "...kSSSUSSTSrrSTSSUSSk", "...kSSSSSSSTkTSSSSSSk.", "..kfkSSSSSSSkSSSSSSkfk", "..kfkSSSSSSSkSSSSSSkfk", "...kkTTTTTTTTTTTTTTkk.", "....kTTTTTTTkTTTTTTk..", "....kTTTTTTk.kTTTTTk..", "....kTTTTTk...kTTTTk..", "....kTTTTTk...kTTTTk..", "....kTTTTk.....kTTTk..", "...kTTTTk......kTTTTk.", "...kKKKKk.....kKKKKKk.", "..kKKKKKk.....kKKKKKKk", "..kkkkkk.......kkkkkk.", "......................"], ["........kkkkkk........", ".......kKKKKKKk.......", "......kKKKKKKKKk......", "......kKKKKKKKKk......", "......khhhhhhhhk......", "..kkkkKKKKKKKKKKkkkk..", ".kKKKKKKKKKKKKKKKKKKk.", "..kkkkkkkkkkkkkkkkkk..", "......kczfffffffk.....", "......kGGGGflGGGGk....", "......kGGGGkfGGGGk....", "......kffffffFfffk....", "......kfffffFFffffk...", "......kfeeeeeeeefk....", "......kffeeffeeffk....", ".......kfffkkfffk.....", "........kffffffk......", ".....kkkkSSSSSSSkkk...", "....kSSSSSuurruSSSSSk.", "...kSSUSSSSurrSSSSUSk.", "...kSSUSSTSSrrSSTSSUSk", "...kSSSUSSTSrrSTSSUSSk", "...kSSSSSSSTkTSSSSSSk.", "..kfkSSSSSSSkSSSSSSkfk", "..kfkSSSSSSSkSSSSSSkfk", "....kTTTTTTTTTTTTTTk..", ".....kTTTTTTkTTTTTk...", "......kTTTTTkTTTTk....", ".......kTTTTkTTTk.....", "........kTTTTTTTk.....", "........kTTTkTTTk.....", ".......kTTTk.kTTk.....", "......kKKKKk.kKKKk....", ".....kKKKKKk.kKKKKk...", ".....kkkkkk...kkkkk...", "......................"]]};
 "use strict";
 
 /* =========================================================
@@ -142,7 +185,7 @@ const CONFIG = {
   velocidadeInicial: 80,
   aceleracao: 2.2,
   gravidade: 900,
-  forcaPulo: 340,                 // v1: 300. Maior porque o tigre e os obstáculos cresceram
+  forcaPulo: 340,                 // v1: 300; v2 subiu porque o tigre e os obstáculos cresceram
   velocidadeAndar: 120,
   tropecosParaCaptura: 5,
   segundosSemTropecoParaRecuperar: 6,
@@ -152,9 +195,10 @@ const CONFIG = {
   intervaloObstaculoInicial: 1.6,
   intervaloObstaculoMinimo: 0.6,
   chanceNota: 0.4,
-  carroAPartirDe: 25,             // antes disso o carro é longo demais para a velocidade (teste de pulabilidade)
+  bonusBarraca: 30,               // R$ ganhos ao passar pela barraca de moedas
+  barracaACada: [15, 25],         // aparece a cada 15 a 25 segundos
   notas: [[2, 35], [5, 25], [10, 18], [20, 12], [50, 7], [100, 3]],
-  contagem: ["3", "2", "1", "Se prepareeee!"],
+  contagem: ["Se prepareeee!", "3", "2", "1", "Corre!"],
   tempoPorPassoDaContagem: 0.8,
 };
 
@@ -178,6 +222,7 @@ function criarSprite(linhas) {
 const IMG = {
   tigreCorre: SPRITES.tigre.corre.map(criarSprite),
   tigrePulo: criarSprite(SPRITES.tigre.pulo),
+  tigreIntro: criarSprite(SPRITES.tigre.intro),
   larapio: SPRITES.larapio.map(criarSprite),
 };
 const TIGRE_W = IMG.tigrePulo.width, TIGRE_H = IMG.tigrePulo.height;      // 26 x 30
@@ -323,6 +368,7 @@ function novoJogo(modo = "jogando") {
     larapio: { x: -LAR_W }, tempoCaptura: 0, contagem: 0,
     obstaculos: [], itens: [], particulas: [], textos: [],
     proxObstaculo: 1.2, proxMoedas: 0.6, tremor: 0, postes: 40,
+    barracas: [], proxBarraca: rnd(...CONFIG.barracaACada),
   };
 }
 
@@ -331,7 +377,6 @@ const TIPOS = {
   hidrante: { w: 10, h: 16 },
   lixeira:  { w: 14, h: 18 },
   caixote:  { w: 18, h: 13 },
-  carro:    { w: 34, h: 15 },
 };
 function sortearNota() {
   const total = CONFIG.notas.reduce((s, n) => s + n[1], 0);
@@ -339,9 +384,9 @@ function sortearNota() {
   for (const [valor, peso] of CONFIG.notas) if ((r -= peso) < 0) return valor;
   return 2;
 }
-function criarObstaculo(x, permitirCarro) {
-  const nomes = ["hidrante", "lixeira", "caixote"];
-  const tipo = permitirCarro && Math.random() < 0.18 ? "carro" : nomes[Math.floor(Math.random() * nomes.length)];
+function criarObstaculo(x) {
+  const nomes = Object.keys(TIPOS);
+  const tipo = nomes[Math.floor(Math.random() * nomes.length)];
   const o = { tipo, x, w: TIPOS[tipo].w, h: TIPOS[tipo].h, atingido: false, queda: 0,
               cor: ["#2f4a4f", "#7a5a2e", "#6a2e3a", "#2e3a6a"][Math.floor(Math.random() * 4)] };
   estado.obstaculos.push(o);
@@ -357,10 +402,10 @@ function criarObstaculo(x, permitirCarro) {
 }
 function gerarObstaculos() {
   const t = estado.t;
-  const o = criarObstaculo(W + 10, t > CONFIG.carroAPartirDe);
-  if (o.tipo !== "carro" && t > 35 && Math.random() < Math.min(0.35, (t - 35) / 150)) criarObstaculo(o.x + o.w + 20, false);
+  const o = criarObstaculo(W + 10);
+  if (t > 35 && Math.random() < Math.min(0.35, (t - 35) / 150)) criarObstaculo(o.x + o.w + 20);
   const base = Math.max(CONFIG.intervaloObstaculoMinimo, CONFIG.intervaloObstaculoInicial - t * 0.012);
-  estado.proxObstaculo = Math.max(base * rnd(0.75, 1.45), (o.tipo === "carro" ? 110 : 80) / estado.velocidade);
+  estado.proxObstaculo = Math.max(base * rnd(0.75, 1.45), 80 / estado.velocidade);
 }
 function gerarMoedas() {
   const n = 4 + Math.floor(Math.random() * 3), arco = Math.random() < 0.45;
@@ -374,10 +419,7 @@ function gerarMoedas() {
 
 /* ===== Regras (iguais à v1) ===== */
 function caixaJogador() { const j = estado.jogador; return { x: j.x + 6, y: j.y - 27, w: 14, h: 26 }; }
-function caixaObstaculo(o) {
-  return o.tipo === "carro" ? { x: o.x + 2, y: GROUND - 10, w: o.w - 4, h: 10 }   // a cabine não conta: dá pra raspar no teto
-                            : { x: o.x + 1, y: GROUND - o.h + 2, w: o.w - 2, h: o.h - 2 };
-}
+function caixaObstaculo(o) { return { x: o.x + 1, y: GROUND - o.h + 2, w: o.w - 2, h: o.h - 2 }; }
 const colide = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 function textoFlutuante(txt, x, y, cor) { estado.textos.push({ txt, x, y, cor, vida: 0.9 }); }
 
@@ -385,7 +427,8 @@ function coletar(item) {
   item.coletado = true;
   estado.dinheiro += item.valor;
   estado.historico.push({ t: estado.t, valor: item.valor });
-  if (item.tipo === "nota") textoFlutuante("+R$" + item.valor, item.x + 6, item.y - 2, "#ffd23f");
+  if (item.tipo === "nota") { textoFlutuante("+R$" + item.valor, item.x + 6, item.y - 2, "#ffd23f"); Som.nota(); }
+  else Som.moeda();
 }
 function tropecar(o) {
   const e = estado, j = e.jogador;
@@ -400,11 +443,13 @@ function tropecar(o) {
       e.particulas.push({ x: j.x + 13, y: j.y - 16, vx: rnd(-70, 70), vy: rnd(-200, -120), vida: 0.9 });
   } else textoFlutuante("Ai!", j.x + 13, j.y - 36, "#ff6b5e");
   j.invencivel = CONFIG.invencivelAposTropeco;
+  Som.tropeco();
   if (!reduzMovimento) e.tremor = 0.25;
   if (e.tropecos >= CONFIG.tropecosParaCaptura) capturar();
 }
 function capturar() {
   estado.modo = "capturado"; estado.tempoCaptura = 0;
+  Som.pararMusica(); Som.captura();
   textoFlutuante("Peguei!", estado.jogador.x + 13, estado.jogador.y - 40, "#ffffff");
 }
 function fimDeJogo() {
@@ -432,6 +477,8 @@ function mostrarPassoContagem(i) {
   const span = document.createElement("span");
   span.textContent = CONFIG.contagem[i];
   el.appendChild(span);
+  const ultimo = i === CONFIG.contagem.length - 1;
+  if (i > 0) Som.bip(ultimo);
 }
 function atualizarContagem(dt) {
   const e = estado;
@@ -439,7 +486,7 @@ function atualizarContagem(dt) {
   e.contagem += dt;
   const passo = Math.floor(e.contagem / CONFIG.tempoPorPassoDaContagem);
   e.larapio.x += (-14 - e.larapio.x) * Math.min(1, dt * 2);     // ele aparece na esquina
-  if (passo >= CONFIG.contagem.length) { $("countdown").classList.add("hidden"); e.modo = "jogando"; return; }
+  if (passo >= CONFIG.contagem.length) { $("countdown").classList.add("hidden"); e.modo = "jogando"; Som.musica(); return; }
   if (passo !== antes) mostrarPassoContagem(passo);
 }
 
@@ -462,7 +509,7 @@ function atualizar(dt) {
 
   const dir = (input.right ? 1 : 0) - (input.left ? 1 : 0);
   j.x = Math.min(W - 80, Math.max(4, j.x + dir * CONFIG.velocidadeAndar * dt));
-  if (input.jumpPressionado && j.noChao) { j.vy = -CONFIG.forcaPulo; j.noChao = false; }
+  if (input.jumpPressionado && j.noChao) { j.vy = -CONFIG.forcaPulo; j.noChao = false; Som.pulo(); }
   input.jumpPressionado = false;
   if (!input.jump && j.vy < -130) j.vy = -130;
   j.vy += CONFIG.gravidade * dt; j.y += j.vy * dt;
@@ -471,6 +518,13 @@ function atualizar(dt) {
 
   if ((e.proxObstaculo -= dt) <= 0) gerarObstaculos();
   if ((e.proxMoedas -= dt) <= 0) gerarMoedas();
+  if ((e.proxBarraca -= dt) <= 0) {
+    const livre = !e.obstaculos.some(o => o.x > W - 60);
+    if (livre) { e.barracas.push({ x: W + 10, w: 30, usada: false }); e.proxObstaculo = Math.max(e.proxObstaculo, 70 / e.velocidade); }
+    e.proxBarraca = livre ? rnd(...CONFIG.barracaACada) : 0.5;
+  }
+  for (const b of e.barracas) b.x -= dx;
+  e.barracas = e.barracas.filter(b => b.x > -40);
   for (const o of e.obstaculos) o.x -= dx;
   for (const i of e.itens) i.x -= dx;
   e.obstaculos = e.obstaculos.filter(o => o.x > -50);
@@ -478,6 +532,7 @@ function atualizar(dt) {
 
   const cj = caixaJogador();
   for (const i of e.itens) if (colide(cj, i)) coletar(i);
+  for (const b of e.barracas) if (!b.usada && cj.x + cj.w > b.x + 4 && cj.x < b.x + b.w - 4) bonusBarraca(b);
   if (j.invencivel <= 0)
     for (const o of e.obstaculos) if (!o.atingido && colide(cj, caixaObstaculo(o))) { tropecar(o); break; }
   if (e.modo !== "jogando") return;
@@ -548,7 +603,7 @@ function desenharObstaculo(o) {
   ctx.save();
   if (o.queda > 0) {
     ctx.globalAlpha = 1 - o.queda * 0.7;
-    ctx.translate(x + o.w / 2, GROUND); ctx.rotate(o.queda * (o.tipo === "carro" ? 0.15 : 0.9)); ctx.translate(-(x + o.w / 2), -GROUND);
+    ctx.translate(x + o.w / 2, GROUND); ctx.rotate(o.queda * 0.9); ctx.translate(-(x + o.w / 2), -GROUND);
   }
   ctx.fillStyle = "rgba(10,5,20,.35)"; ctx.fillRect(x - 1, GROUND - 1, o.w + 2, 2);  // sombra
   const r = (a, b, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x + a, topo + b, w, h); };
@@ -563,14 +618,8 @@ function desenharObstaculo(o) {
     r(0, 0, 18, 13, "#6e3f1c");
     for (let i = 1; i < 12; i += 4) r(1, i, 16, 3, "#b07a42");
     r(2, -3, 4, 3, "#e9502e"); r(7, -4, 4, 4, "#f2b632"); r(12, -3, 4, 3, "#7ab83a");      // frutas
-  } else desenharCarroObst(x, o.cor);
+  }
   ctx.restore();
-}
-function desenharCarroObst(x, cor) {
-  const r = (a, b, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x + a, GROUND - b, w, h); };
-  r(2, 10, 30, 5, cor); r(0, 8, 34, 4, cor); r(9, 15, 16, 5, cor); r(10, 16, 14, 1, "#ffffff22");
-  r(11, 14, 6, 3, "#9fc6d6"); r(19, 14, 5, 3, "#9fc6d6"); r(0, 5, 34, 1, "#c9c9d2"); r(31, 10, 2, 2, "#ffe9a0");
-  r(4, 4, 7, 4, "#1a1420"); r(23, 4, 7, 4, "#1a1420"); r(6, 3, 3, 2, "#9a9aa6"); r(25, 3, 3, 2, "#9a9aa6");
 }
 const COR_NOTA = { 2: ["#8fb3cf", "#4c6f8c"], 5: ["#b08fd0", "#6a4b8c"], 10: ["#e46a5f", "#8c2f28"],
                    20: ["#f2c14e", "#9c7414"], 50: ["#e08a3c", "#8a4a12"], 100: ["#5f9ae0", "#244f8c"] };
@@ -604,6 +653,7 @@ function desenharPoster() {
   ctx.save(); ctx.imageSmoothingEnabled = false;
   const sobe = reduzMovimento ? 0 : Math.round(Math.sin(e.relogio * 3) * 2);
   ctx.drawImage(IMG.larapio[Math.floor(e.relogio * 4) % 2], 22, 66 + sobe, LAR_W * 3, LAR_H * 3);
+  ctx.save(); ctx.translate(220, 84 - sobe); ctx.scale(3, 3); desenharRabo(0, TIGRE_H, false, e.relogio); ctx.restore();
   ctx.drawImage(IMG.tigreCorre[Math.floor(e.relogio * 6) % 2], 220, 84 - sobe, TIGRE_W * 3, TIGRE_H * 3);
   ctx.restore();
   // notas voando atrás do tigre
@@ -616,10 +666,12 @@ function desenharPoster() {
 
 function desenhar() {
   const e = estado;
-  if (e.modo === "inicio") { desenharPoster(); return; }
+  if (e.modo === "menu" || e.modo === "splash") { desenharPoster(); return; }
+  if (e.modo === "intro") { desenharIntro(); return; }
   ctx.save();
   if (e.tremor > 0) ctx.translate(Math.round(rnd(-2, 2)), Math.round(rnd(-1.5, 1.5)));
   desenharCenario(e.scroll);
+  for (const b of e.barracas) desenharBarraca(b);
   for (const i of e.itens) desenharItem(i, e.t + e.tempoCaptura);
   for (const o of e.obstaculos) desenharObstaculo(o);
   const passo = Math.floor(e.scroll / 16) % 2;
@@ -630,7 +682,7 @@ function desenhar() {
   ctx.fillRect(Math.round(j.x) + 6, GROUND - 1, 14, 2);
   const pisca = j.invencivel > 0 && Math.floor(j.invencivel * 12) % 2 === 0;
   const sprite = !j.noChao ? IMG.tigrePulo : (e.modo === "contagem" ? IMG.tigreCorre[0] : IMG.tigreCorre[passo]);
-  if (!pisca) ctx.drawImage(sprite, Math.round(j.x), Math.round(j.y) - TIGRE_H);
+  if (!pisca) { desenharRabo(j.x, j.y, !j.noChao, e.relogio); ctx.drawImage(sprite, Math.round(j.x), Math.round(j.y) - TIGRE_H); }
   ctx.fillStyle = "#ffd23f";
   for (const p of e.particulas) ctx.fillRect(Math.round(p.x), Math.round(p.y), 3, 3);
   ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = "center";
@@ -643,7 +695,350 @@ function desenhar() {
   ctx.restore();
 }
 
-/* ===== HUD e telas ===== */
+
+/* ===== Rabo listrado que balança ===== */
+function desenharRabo(x, y, pulando, t) {
+  const ax = x + 6, ay = y - 9;
+  for (let i = 0; i < 11; i++) {
+    const onda = reduzMovimento ? 0 : Math.sin(t * 14 - i * 0.55) * i * 0.28;
+    const px = Math.round(ax - i * (pulando ? 0.8 : 1)), py = Math.round(ay - i * (pulando ? 1.1 : 0.7) + onda);
+    ctx.fillStyle = "#241208"; ctx.fillRect(px - 1, py - 1, 3, 3);                 // contorno
+    ctx.fillStyle = i >= 9 ? "#fff3dc" : (i % 3 === 2 ? "#3a1c0a" : "#f49828");
+    ctx.fillRect(px, py, 2, 2);
+  }
+}
+
+/* ===== Barraca de moedas (bônus) ===== */
+function desenharBarraca(b) {
+  const x = Math.round(b.x), r = (a, c, w, h, cor) => { ctx.fillStyle = cor; ctx.fillRect(x + a, GROUND - c, w, h); };
+  r(1, 42, 2, 42, "#4a2a14"); r(27, 42, 2, 42, "#4a2a14");                     // postes
+  for (let i = 0; i < 30; i++) r(i, 46, 1, 6, Math.floor(i / 5) % 2 ? "#f3e6d0" : "#2f5fd0"); // toldo
+  for (let i = 0; i < 30; i += 5) r(i, 40, 5, 1, Math.floor(i / 5) % 2 ? "#f3e6d0" : "#2f5fd0");
+  r(-1, 16, 32, 3, "#8a5a2c"); r(0, 13, 30, 13, "#6e3f1c");                      // balcão
+  for (let i = 2; i < 30; i += 6) r(i, 12, 1, 11, "#5a3216");
+  if (!b.usada) {
+    const pilha = [[4, 3], [8, 5], [12, 7], [16, 6], [20, 4], [24, 2]];
+    for (const [px, h] of pilha) { r(px, 16 + h, 5, h, "#c99a1a"); r(px + 1, 16 + h, 3, 1, "#ffd23f"); }
+    if (Math.floor(estado.relogio * 4) % 2) r(13, 25, 1, 1, "#ffffff");
+  }
+}
+function bonusBarraca(b) {
+  const e = estado; b.usada = true;
+  e.dinheiro += CONFIG.bonusBarraca;
+  e.historico.push({ t: e.t, valor: CONFIG.bonusBarraca });
+  textoFlutuante("+R$" + CONFIG.bonusBarraca + " BÔNUS!", b.x + 15, GROUND - 52, "#ffd23f");
+  for (let i = 0; i < 14; i++) e.particulas.push({ x: b.x + 15, y: GROUND - 20, vx: rnd(-50, 50), vy: rnd(-230, -140), vida: 0.9 });
+  Som.bonus();
+}
+
+/* =========================================================
+   SOM — sintetizado na hora (Web Audio), estilo arcade.
+   Nenhum arquivo de áudio: cada som é uma "receita" de notas.
+   ========================================================= */
+const CHAVE_SOM = "mano-miau-som";
+const Som = {
+  ctx: null, master: null, ruidoBuf: null, timer: null,
+  ligado: (() => { try { return localStorage.getItem(CHAVE_SOM) !== "0"; } catch { return true; } })(),
+  iniciar() {
+    if (!this.ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      this.ctx = new AC();
+      this.master = this.ctx.createGain();
+      this.master.gain.value = this.ligado ? 0.5 : 0;
+      this.master.connect(this.ctx.destination);
+      const n = this.ctx.sampleRate;
+      this.ruidoBuf = this.ctx.createBuffer(1, n, n);
+      const d = this.ruidoBuf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    }
+    if (this.ctx.state === "suspended") this.ctx.resume();
+  },
+  tom(freq, dur, tipo = "square", vol = 0.2, quando = 0, ate = null) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime + quando, o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.type = tipo; o.frequency.setValueAtTime(freq, t);
+    if (ate) o.frequency.exponentialRampToValueAtTime(ate, t + dur);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(g); g.connect(this.master); o.start(t); o.stop(t + dur + 0.05);
+  },
+  ruido(dur, vol = 0.3, quando = 0, corte = 1200) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime + quando, s = this.ctx.createBufferSource(), f = this.ctx.createBiquadFilter(), g = this.ctx.createGain();
+    s.buffer = this.ruidoBuf; f.type = "lowpass"; f.frequency.value = corte;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    s.connect(f); f.connect(g); g.connect(this.master); s.start(t); s.stop(t + dur + 0.05);
+  },
+  moeda()   { this.tom(988, 0.06, "square", 0.12); this.tom(1319, 0.14, "square", 0.12, 0.06); },
+  nota()    { [784, 988, 1175, 1568].forEach((f, i) => this.tom(f, 0.09, "square", 0.1, i * 0.05)); },
+  pulo()    { this.tom(260, 0.18, "square", 0.08, 0, 620); },
+  tropeco() { this.ruido(0.15, 0.25, 0, 900); this.tom(330, 0.3, "sawtooth", 0.12, 0, 90); },
+  bonus()   { [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => this.tom(f, 0.1, "square", 0.1, i * 0.06)); },
+  bip(final) { this.tom(final ? 1047 : 523, final ? 0.35 : 0.15, "square", 0.13); },
+  blip()    { this.tom(1300 + Math.random() * 300, 0.025, "square", 0.035); },
+  apagao()  { this.tom(180, 0.25, "square", 0.12, 0, 60); this.ruido(0.08, 0.2, 0, 2000); },
+  alarme()  { for (let i = 0; i < 8; i++) this.tom(i % 2 ? 660 : 880, 0.22, "sawtooth", 0.06, i * 0.24); },
+  boom()    { this.ruido(1.6, 0.7, 0, 600); this.ruido(0.4, 0.4, 0, 3000); this.tom(110, 0.9, "sine", 0.5, 0, 28); },
+  captura() { [523, 392, 330, 262].forEach((f, i) => this.tom(f, 0.2, "square", 0.12, i * 0.16)); },
+  // Caixa registradora antiga: o "clac" da gaveta, o sino e as moedas tilintando
+  plim() {
+    this.ruido(0.05, 0.4, 0, 3500); this.ruido(0.06, 0.35, 0.07, 2500);
+    [2093, 2637, 3136].forEach((f, i) => this.tom(f, 1.2, "sine", 0.16, 0.14 + i * 0.004));
+    this.tom(4186, 0.7, "sine", 0.05, 0.14);
+    for (let i = 0; i < 7; i++) this.tom(2300 + Math.random() * 1500, 0.05, "triangle", 0.06, 0.5 + i * 0.07);
+  },
+  // Música de fundo: baixo + melodia em loop, agendados um pouco à frente
+  musica() {
+    if (!this.ctx || this.timer) return;
+    this.passoM = 0; this.prox = this.ctx.currentTime + 0.05;
+    this.timer = setInterval(() => this.agendar(), 60);
+  },
+  pararMusica() { clearInterval(this.timer); this.timer = null; },
+  agendar() {
+    const BAIXO = [110, 110, 131, 110, 98, 98, 82, 98, 87, 87, 110, 87, 82, 82, 98, 123];
+    const MELO = [440, 0, 523, 0, 659, 523, 440, 0, 392, 0, 494, 0, 587, 494, 392, 0,
+                  349, 0, 440, 0, 523, 440, 349, 0, 330, 0, 415, 0, 494, 0, 330, 0];
+    const passo = 0.16;
+    while (this.prox < this.ctx.currentTime + 0.25) {
+      const q = this.prox - this.ctx.currentTime, i = this.passoM;
+      this.tom(BAIXO[Math.floor(i / 2) % 16], 0.14, "triangle", 0.13, q);
+      const m = MELO[i % 32]; if (m) this.tom(m, 0.12, "square", 0.03, q);
+      if (i % 2) this.ruido(0.03, 0.05, q, 7000);
+      this.passoM++; this.prox += passo;
+    }
+  },
+  alternar() {
+    this.ligado = !this.ligado;
+    try { localStorage.setItem(CHAVE_SOM, this.ligado ? "1" : "0"); } catch { /* ok */ }
+    if (this.master) this.master.gain.value = this.ligado ? 0.5 : 0;
+    atualizarBotaoSom();
+  },
+};
+function atualizarBotaoSom() {
+  const b = $("somBtn");
+  b.textContent = Som.ligado ? "♪" : "×";
+  b.setAttribute("aria-pressed", String(Som.ligado));
+  b.setAttribute("aria-label", Som.ligado ? "Som ligado" : "Som desligado");
+}
+
+/* =========================================================
+   INTRO — o roteiro do Lucas, cena por cena.
+   Cada passo é uma fala ou um efeito; o jogador avança tocando.
+   ========================================================= */
+const CHAVE_INTRO = "mano-miau-intro-vista";
+const NOMES = { mano: "Mano Miau", lar: "Don Larápio" };
+const ROTEIRO = [
+  { cena: 1, titulo: "Cena 1: A borda do império",
+    fala: ["mano", "O Cassino Miau tá faturando alto! Ninguém na cidade tem uma fortuna do tamanho da minha."] },
+  { cena: 2, titulo: "Cena 2: A invasão de Don Larápio",
+    fala: ["lar", "Boa noite, Mano Miau. Belo cassino... pena que agora tudo isso é meu!"] },
+  { cena: 2, fala: ["mano", "Don Larápio?! Nem pense em encostar no meu cofre!"] },
+  { cena: 3, titulo: "Cena 3: O erro fatal",
+    fala: ["lar", "O quê?! A carga do hacker era forte demais!"] },
+  { cena: 3, efeito: "boom", duracao: 2.6 },
+  { cena: 4, titulo: "Cena 4: A perseguição começa",
+    fala: ["mano", "Meu dinheiro tá voando pela cidade toda! Preciso recolher tudo antes que vire poeira!"] },
+  { cena: 4, fala: ["lar", "Pode ir juntando, tigrinho! Eu vou pegar cada centavo que você catar... e você não vai me escapar!"] },
+  { cena: 4, objetivo: true },
+];
+let intro = null;
+
+function iniciarIntro() {
+  Som.iniciar();
+  novoJogo("intro");
+  intro = { passo: -1, cena: 0, tPasso: 0, tCena: 0, chars: 0, explodiu: false, tBoom: 0, voando: [], chuva: [], porta: null };
+  mostrarTela(null);
+  $("introLayer").classList.remove("hidden");
+  ["objetivo", "boom", "balao", "cenaTitulo"].forEach(id => $(id).classList.add("hidden"));
+  $("dica").classList.remove("hidden"); $("pularBtn").classList.remove("hidden");
+  $("introLayer").focus();   // tira o foco do botão clicado, senão o espaço "aperta" o botão escondido
+  atualizarVisibilidade();
+  proximoPasso();
+}
+function proximoPasso() {
+  intro.passo++;
+  const p = ROTEIRO[intro.passo];
+  if (!p) return;
+  if (p.cena !== intro.cena) { intro.cena = p.cena; intro.tCena = 0; trocarCena(p.cena); }
+  intro.tPasso = 0; intro.chars = 0;
+  if (p.titulo) { $("cenaTitulo").textContent = p.titulo; $("cenaTitulo").classList.remove("hidden"); }
+  const balao = $("balao");
+  if (p.fala) {
+    balao.classList.remove("hidden", "esq", "dir");
+    balao.classList.add(p.fala[0] === "lar" ? "esq" : "dir");
+    $("balaoQuem").textContent = NOMES[p.fala[0]];
+    $("balaoTxt").textContent = "";
+  } else balao.classList.add("hidden");
+  $("boom").classList.add("hidden");
+  if (p.efeito === "boom") explodir();
+  if (p.objetivo) {
+    $("cenaTitulo").classList.add("hidden"); $("dica").classList.add("hidden"); $("pularBtn").classList.add("hidden");
+    $("objetivo").classList.remove("hidden"); $("irMenuBtn").focus();
+  }
+}
+function trocarCena(c) {
+  if (c === 2) Som.apagao();
+  if (c === 3) Som.alarme();
+  if (c === 4) {
+    estado.scroll = 0;
+    intro.chuva = Array.from({ length: 16 }, () => novaNotaChuva(true));
+  }
+}
+function novaNotaChuva(espalhar) {
+  const valores = [2, 5, 10, 20, 50, 100];
+  return { tipo: Math.random() < 0.35 ? "moeda" : "nota", valor: valores[Math.floor(Math.random() * 6)],
+           x: rnd(0, W), y: espalhar ? rnd(-20, GROUND - 20) : rnd(-30, -8), vy: rnd(18, 34), fase: rnd(0, 6) };
+}
+function explodir() {
+  const I = intro;
+  I.explodiu = true; I.tBoom = 0;
+  Som.boom();
+  if (!reduzMovimento) estado.tremor = 0.7;
+  const el = $("boom"); el.innerHTML = ""; const s = document.createElement("span"); s.textContent = "BOOM! KABLEM!"; el.appendChild(s);
+  el.classList.remove("hidden");
+  I.porta = { x: 80, y: 100, vx: 140, vy: -160, rot: 0 };
+  const valores = [2, 5, 10, 20, 50, 100];
+  I.voando = Array.from({ length: 46 }, () => ({ tipo: Math.random() < 0.4 ? "moeda" : "nota", valor: valores[Math.floor(Math.random() * 6)],
+    x: rnd(70, 100), y: rnd(80, 120), vx: rnd(-40, 160), vy: rnd(-200, -40), fase: rnd(0, 6) }));
+}
+function avancarIntro() {
+  if (!intro || estado.modo !== "intro") return;
+  const p = ROTEIRO[intro.passo];
+  if (!p || p.objetivo) return;
+  if (p.efeito) { if (intro.tPasso > 0.8) proximoPasso(); return; }
+  if (p.fala && intro.chars < p.fala[1].length) { intro.chars = p.fala[1].length; $("balaoTxt").textContent = p.fala[1]; return; }
+  proximoPasso();
+}
+function atualizarIntro(dt) {
+  const I = intro, e = estado, p = ROTEIRO[I.passo];
+  I.tPasso += dt; I.tCena += dt; e.relogio += dt;
+  e.tremor = Math.max(0, e.tremor - dt);
+  if (p && p.fala && I.chars < p.fala[1].length) {
+    const antes = Math.floor(I.chars);
+    I.chars = Math.min(p.fala[1].length, I.chars + dt * 38);
+    if (Math.floor(I.chars) !== antes) { $("balaoTxt").textContent = p.fala[1].slice(0, Math.floor(I.chars)); if (Math.floor(I.chars) % 3 === 0) Som.blip(); }
+  }
+  if (p && p.efeito && I.tPasso >= p.duracao) proximoPasso();
+  if (I.explodiu) {
+    I.tBoom += dt;
+    if (I.porta) { I.porta.vy += 420 * dt; I.porta.x += I.porta.vx * dt; I.porta.y += I.porta.vy * dt; I.porta.rot += dt * 9; }
+    for (const v of I.voando) {
+      if (I.tBoom > 0.6) { v.vx += (300 - v.x) * 1.6 * dt; v.vy += (28 - v.y) * 1.6 * dt; }  // o duto de ventilação suga tudo
+      else v.vy += 300 * dt;
+      v.x += v.vx * dt; v.y += v.vy * dt;
+    }
+    I.voando = I.voando.filter(v => !(v.x > 280 && v.y < 40));
+  }
+  if (I.cena === 4) {
+    e.scroll += 120 * dt;
+    for (const n of I.chuva) { n.y += n.vy * dt; n.x += Math.sin(e.relogio * 2 + n.fase) * 10 * dt - 40 * dt; if (n.y > GROUND - 6 || n.x < -14) Object.assign(n, novaNotaChuva(false)); }
+  }
+}
+function fimIntro(comPlim) {
+  try { localStorage.setItem(CHAVE_INTRO, "1"); } catch { /* ok */ }
+  $("introLayer").classList.add("hidden");
+  intro = null;
+  irMenu(comPlim);
+}
+
+/* ===== Desenho da intro ===== */
+const ESCALA_INTRO = 2;
+function desenharGrande(img, x, y) { ctx.drawImage(img, Math.round(x), Math.round(y), img.width * ESCALA_INTRO, img.height * ESCALA_INTRO); }
+function desenharIntro() {
+  const e = estado, I = intro;
+  ctx.save();
+  if (e.tremor > 0) ctx.translate(Math.round(rnd(-3, 3)), Math.round(rnd(-2, 2)));
+  if (I.cena <= 3) desenharCassino(I); else desenharRuaIntro(I);
+  ctx.restore();
+}
+function desenharCassino(I) {
+  const e = estado, PISO = 150;
+  // parede com papel listrado e rodapé dourado
+  ctx.fillStyle = "#3a1424"; ctx.fillRect(-4, -4, W + 8, PISO + 4);
+  ctx.fillStyle = "#44182c"; for (let x = 0; x < W; x += 8) ctx.fillRect(x, 0, 3, 118);
+  ctx.fillStyle = "#2a0e1a"; ctx.fillRect(-4, 118, W + 8, PISO - 118);
+  ctx.fillStyle = "#c9962a"; ctx.fillRect(-4, 118, W + 8, 2);
+  // carpete
+  ctx.fillStyle = "#4a0f1e"; ctx.fillRect(-4, PISO, W + 8, H - PISO + 4);
+  ctx.fillStyle = "#7a2a2e"; for (let y = PISO + 4; y < H; y += 8) for (let x = (y / 8 % 2) * 8; x < W; x += 16) ctx.fillRect(x, y, 2, 2);
+  // letreiro do cassino
+  const apagado = I.cena === 2 && I.tCena < 0.9 && Math.floor(I.tCena * 12) % 2 === 0;
+  ctx.fillStyle = "#1a0a14"; ctx.fillRect(104, 8, 112, 24);
+  neon(ctx, "CASSINO MIAU", 112, 14, 2, apagado || I.cena >= 2 ? "#6a2a4a" : "#ff5fa8", apagado || I.cena >= 2 ? "#3a1a2a" : "#ffb0d6");
+  // duto de ventilação
+  ctx.fillStyle = "#1e1a24"; ctx.fillRect(272, 20, 36, 18);
+  ctx.fillStyle = "#6a6e78"; for (let y = 22; y < 37; y += 3) ctx.fillRect(274, y, 32, 1);
+  // cofre
+  const cx = 80, cy = 100;
+  circulo(cx, cy, 26, "#2a2a32"); circulo(cx, cy, 24, "#5a5e68");
+  if (I.porta) { circulo(cx, cy, 20, "#0e0a10"); }
+  else {
+    circulo(cx, cy, 19, "#8a8e98"); circulo(cx, cy, 6, "#5a5e68");
+    ctx.fillStyle = "#3a3e48"; for (let a = 0; a < 6; a++) { const ang = a * Math.PI / 3 + (I.cena === 3 ? I.tCena * 6 : 0); ctx.fillRect(Math.round(cx + Math.cos(ang) * 11) - 1, Math.round(cy + Math.sin(ang) * 11) - 1, 3, 3); }
+  }
+  // mesa com dinheiro
+  const tigreY = 140 - TIGRE_H * ESCALA_INTRO;
+  desenharGrande(IMG.tigreIntro, 204, tigreY + (I.cena === 1 ? Math.round(Math.sin(e.relogio * 3)) : 0));
+  ctx.fillStyle = "#5e3416"; ctx.fillRect(176, 124, 116, PISO - 124);
+  ctx.fillStyle = "#7a4a24"; ctx.fillRect(172, 120, 124, 5);
+  ctx.fillStyle = "#c9962a"; ctx.fillRect(176, 134, 116, 1);
+  if (!I.explodiu) {
+    const cresce = I.cena === 1 ? Math.min(1, I.tCena / 2.5) : 1;
+    [[180, 14], [188, 18], [196, 10]].forEach(([x, h]) => {
+      const hh = Math.round(h * cresce);
+      for (let y = 0; y < hh; y += 2) { ctx.fillStyle = y % 4 ? "#c99a1a" : "#ffd23f"; ctx.fillRect(x, 120 - y - 2, 6, 2); }
+    });
+    [[262, 12, 100], [276, 8, 50]].forEach(([x, h, v]) => {
+      const hh = Math.round(h * cresce), [claro, escuro] = COR_NOTA[v];
+      for (let y = 0; y < hh; y += 2) { ctx.fillStyle = y % 4 ? escuro : claro; ctx.fillRect(x, 120 - y - 2, 12, 2); }
+    });
+  }
+  // Don Larápio entra pela penumbra e liga o dispositivo no cofre
+  if (I.cena >= 2) {
+    const lx = Math.min(22, -50 + I.tCena * 70), andando = lx < 22;
+    desenharGrande(IMG.larapio[andando ? Math.floor(I.tCena * 6) % 2 : 0], lx, PISO - LAR_H * ESCALA_INTRO);
+    if (!andando) {
+      ctx.fillStyle = "#1e1a24"; ctx.fillRect(Math.round(lx) + 42, 116, 18, 1); ctx.fillRect(Math.round(lx) + 59, 104, 1, 13);
+      if (!I.porta) { ctx.fillStyle = "#2a2f3a"; ctx.fillRect(94, 96, 10, 8); ctx.fillStyle = "#9aa"; ctx.fillRect(98, 90, 1, 6); }
+    }
+  }
+  // iluminação: apagão (cena 2) e alarme vermelho (cena 3)
+  if (I.cena === 2) {
+    const piscando = I.tCena < 0.9 && Math.floor(I.tCena * 12) % 2 === 0;
+    ctx.fillStyle = piscando ? "rgba(5,5,15,.75)" : "rgba(8,10,30,.5)"; ctx.fillRect(-4, -4, W + 8, H + 8);
+  }
+  if (I.cena === 3) {
+    const pulso = reduzMovimento ? 0.2 : 0.12 + (Math.sin(e.relogio * 8) + 1) * 0.1;
+    ctx.fillStyle = `rgba(220,30,30,${pulso})`; ctx.fillRect(-4, -4, W + 8, H + 8);
+  }
+  if (I.cena >= 2 && !I.porta && Math.floor(e.relogio * 4) % 2) { ctx.fillStyle = I.cena === 3 ? "#ff3a3a" : "#5aff7a"; ctx.fillRect(101, 98, 2, 2); }
+  // explosão: clarão, porta voando, dinheiro sugado pelo duto
+  if (I.explodiu) {
+    if (I.tBoom < 0.18) { ctx.fillStyle = "rgba(255,250,230,.9)"; ctx.fillRect(-4, -4, W + 8, H + 8); }
+    if (I.porta && I.porta.y < H + 40) {
+      ctx.save(); ctx.translate(I.porta.x, I.porta.y); ctx.rotate(I.porta.rot);
+      ctx.fillStyle = "#8a8e98"; ctx.fillRect(-14, -14, 28, 28); ctx.fillStyle = "#5a5e68"; ctx.fillRect(-5, -5, 10, 10);
+      ctx.restore();
+    }
+    for (const v of I.voando) desenharItem(v, e.relogio);
+  }
+}
+function circulo(cx, cy, r, cor) {
+  ctx.fillStyle = cor;
+  for (let y = -r; y <= r; y++) { const m = Math.floor(Math.sqrt(r * r - y * y)); ctx.fillRect(cx - m, cy + y, m * 2, 1); }
+}
+function desenharRuaIntro(I) {
+  const e = estado;
+  desenharCenario(e.scroll);
+  for (const n of I.chuva) desenharItem(n, e.relogio);
+  const pulo = reduzMovimento ? 0 : Math.abs(Math.sin(e.relogio * 9)) * 3;
+  desenharGrande(IMG.larapio[Math.floor(e.relogio * 6) % 2], 36, GROUND - LAR_H * ESCALA_INTRO);
+  ctx.save(); ctx.translate(196, GROUND - TIGRE_H * ESCALA_INTRO - pulo); ctx.scale(ESCALA_INTRO, ESCALA_INTRO);
+  desenharRabo(0, TIGRE_H, false, e.relogio); ctx.restore();
+  desenharGrande(IMG.tigreIntro, 196, GROUND - TIGRE_H * ESCALA_INTRO - pulo);
+}
+
+/* ===== HUD, telas e navegação ===== */
 const spansMedidor = [...$("meter").children];
 let ultimoHud = "";
 function atualizarHud() {
@@ -654,20 +1049,44 @@ function atualizarHud() {
   $("bestHud").textContent = "Recorde " + brl.format(recorde);
   spansMedidor.forEach((s, i) => s.classList.toggle("on", i < estado.tropecos));
 }
-function mostrarTela(id) {
-  ["startScreen", "pauseScreen", "overScreen"].forEach(t => $(t).classList.toggle("hidden", t !== id));
-  document.querySelector(".hud").style.visibility = id === "startScreen" ? "hidden" : "visible";
+const TELAS = ["splashScreen", "menuScreen", "pauseScreen", "overScreen"];
+function mostrarTela(id) { TELAS.forEach(t => $(t).classList.toggle("hidden", t !== id)); atualizarVisibilidade(); }
+function atualizarVisibilidade() {
+  const m = estado.modo;
+  $("hud").classList.toggle("hidden", m === "splash" || m === "intro" || m === "menu");
+  $("somBtn").classList.toggle("hidden", m === "splash");
 }
-function pausar() { if (estado.modo === "jogando") { estado.modo = "pausado"; mostrarTela("pauseScreen"); $("resumeBtn").focus(); } }
-function continuar() { if (estado.modo === "pausado") { estado.modo = "jogando"; mostrarTela(null); } }
+function irMenu(comPlim) {
+  Som.pararMusica();
+  novoJogo("menu");
+  mostrarTela("menuScreen");
+  $("menuBest").textContent = recorde > 0 ? "Melhor pontuação: " + brl.format(recorde) : "Melhor pontuação: ainda nenhuma";
+  if (comPlim) Som.plim();
+  $("startBtn").focus();
+}
+function comecarPartida() { Som.iniciar(); iniciarContagem(); atualizarVisibilidade(); }
+function pausar() { if (estado.modo === "jogando") { estado.modo = "pausado"; Som.pararMusica(); mostrarTela("pauseScreen"); $("resumeBtn").focus(); } }
+function continuar() { if (estado.modo === "pausado") { estado.modo = "jogando"; mostrarTela(null); Som.musica(); } }
 
-$("startBtn").addEventListener("click", iniciarContagem);
-$("againBtn").addEventListener("click", iniciarContagem);
+$("splashBtn").addEventListener("click", iniciarIntro);
+$("pularBtn").addEventListener("click", ev => { ev.stopPropagation(); fimIntro(true); });
+$("irMenuBtn").addEventListener("click", ev => { ev.stopPropagation(); fimIntro(true); });
+$("introLayer").addEventListener("click", ev => { if (!ev.target.closest("button")) avancarIntro(); });
+$("startBtn").addEventListener("click", comecarPartida);
+$("againBtn").addEventListener("click", comecarPartida);
+$("introBtn").addEventListener("click", iniciarIntro);
+$("menuBtn").addEventListener("click", () => irMenu(false));
 $("resumeBtn").addEventListener("click", continuar);
-$("startBest").textContent = recorde > 0 ? "Seu recorde: " + brl.format(recorde) : "";
+$("somBtn").addEventListener("click", () => { Som.iniciar(); Som.alternar(); });
+atualizarBotaoSom();
 
 const MAPA = { ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right", ArrowUp: "jump", KeyW: "jump", Space: "jump" };
 window.addEventListener("keydown", ev => {
+  if (ev.code === "KeyM") { Som.iniciar(); Som.alternar(); return; }
+  if (estado.modo === "intro" && (ev.code === "Space" || ev.code === "Enter")) {
+    if (ev.target.closest && ev.target.closest("button")) return;   // botão focado cuida do próprio Enter
+    ev.preventDefault(); avancarIntro(); return;
+  }
   if (ev.code === "KeyP" || ev.code === "Escape") { estado.modo === "jogando" ? pausar() : continuar(); return; }
   const ativo = estado.modo === "jogando" || estado.modo === "contagem";
   if (MAPA[ev.code] && ativo) { ev.preventDefault(); setTecla(MAPA[ev.code], true); }
@@ -686,16 +1105,19 @@ document.querySelectorAll(".pad").forEach(btn => {
 });
 
 /* ===== Laço principal ===== */
-novoJogo("inicio");
-mostrarTela("startScreen");
+const introVista = (() => { try { return localStorage.getItem(CHAVE_INTRO) === "1"; } catch { return false; } })();
+if (introVista) irMenu(false);
+else { novoJogo("splash"); mostrarTela("splashScreen"); $("splashBtn").focus(); }
+
 let anterior = performance.now();
 function laco(agora) {
-  const dt = Math.max(0, Math.min(0.05, (agora - anterior) / 1000)); // nunca negativo: o 1º quadro pode vir "antes" do relógio
+  const dt = Math.max(0, Math.min(0.05, (agora - anterior) / 1000)); // nunca negativo (bug corrigido na v2)
   anterior = agora;
   const m = estado.modo;
   if (m === "jogando" || m === "capturado" || m === "contagem") atualizar(dt);
-  else if (m === "inicio") { estado.relogio += dt; estado.scroll += 20 * dt; }
-  if (m === "contagem") input.jumpPressionado = false;   // ninguém pula antes da largada
+  else if (m === "intro") atualizarIntro(dt);
+  else if (m === "menu" || m === "splash") { estado.relogio += dt; estado.scroll += 20 * dt; }
+  if (m === "contagem") input.jumpPressionado = false;
   desenhar();
   atualizarHud();
   requestAnimationFrame(laco);
