@@ -3,6 +3,8 @@
 Jogo 2D de corrida infinita, em pixel art, que roda direto no navegador.
 O Mano Miau corre pela cidade juntando dinheiro enquanto foge do Larápio.
 
+**Jogue agora:** https://lucasileckdossantos.github.io/Jogo-Mano-Miau/
+
 ## Como jogar
 
 Abra o arquivo `index.html` em qualquer navegador.
