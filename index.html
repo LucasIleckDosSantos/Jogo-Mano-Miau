@@ -94,6 +94,27 @@
   .help { margin: 0; font-size: 10px; line-height: 1.9; color: var(--muted); text-align: center; }
 
   @media (prefers-reduced-motion: reduce) { .big span { animation: none; } }
+
+  /* Online: conta, ranking e apelido */
+  .conta { font-size: clamp(7px, 1.2vw, 12px); color: #fff6e6; text-shadow: 2px 2px 0 #120b22; display: flex; gap: .8em;
+           align-items: center; flex-wrap: wrap; justify-content: center; line-height: 1.6; }
+  .btn.mini { font-size: clamp(7px, 1.2vw, 11px); padding: .6em 1em; box-shadow: 3px 3px 0 #120b22; }
+  .btn.google { background: #fff6e6; color: #2a1d45; }
+  .camada { z-index: 5; background: rgba(16,10,30,.97); }
+  .lista { width: min(620px, 92%); max-height: 52%; overflow-y: auto; margin: 0; padding: 0; list-style: none;
+           background: rgba(10,6,20,.6); box-shadow: inset 0 0 0 2px #3a2a5a; }
+  .lista li { display: grid; grid-template-columns: 4.5em 1fr auto; gap: .8em; padding: .7em 1em;
+              font-size: clamp(7px, 1.3vw, 12px); text-align: left; border-bottom: 1px solid rgba(255,255,255,.07); }
+  .lista li:nth-child(1) .pos { color: #ffd23f; } .lista li:nth-child(2) .pos { color: #d8dce6; } .lista li:nth-child(3) .pos { color: #e8a04e; }
+  .lista li.eu { background: #ffd23f; color: #2a1d45; }
+  .lista li.eu .pos { color: #2a1d45; }
+  .lista .valor { color: var(--money); } .lista li.eu .valor { color: #1e6b3a; }
+  .resumo { color: #ffe9a0; }
+  .campo { font: inherit; font-size: clamp(10px, 1.8vw, 16px); padding: .8em 1em; width: min(360px, 80%); border: 0;
+           background: #fff6e6; color: #2a1d45; box-shadow: inset 0 0 0 3px #2a1d45; text-align: center; }
+  .campo:focus-visible { outline: 3px solid #ffd23f; outline-offset: 2px; }
+  .erro { color: #ff8a7e; min-height: 1.8em; }
+  .online-msg { color: #ffe9a0; }
 </style>
 </head>
 <body>
@@ -139,8 +160,10 @@
       <p class="best" id="menuBest"></p>
       <div class="menu-botoes">
         <button class="btn" id="startBtn">Jogar</button>
+        <button class="btn sec" id="rankingBtn">Ranking</button>
         <button class="btn sec" id="introBtn">Ver intro</button>
       </div>
+      <div class="conta" id="contaMenu"></div>
     </div>
 
     <div class="big hidden" id="countdown" aria-live="assertive"></div>
@@ -154,9 +177,34 @@
       <h2>O Don Larápio te pegou!</h2>
       <p>Você juntou <strong id="finalMoney">R$ 0,00</strong></p>
       <p id="recordMsg"></p>
+      <p class="online-msg" id="onlineMsg" aria-live="polite"></p>
       <div class="menu-botoes">
         <button class="btn" id="againBtn">Jogar de novo</button>
+        <button class="btn sec" id="rankingFimBtn">Ranking</button>
         <button class="btn sec" id="menuBtn">Menu</button>
+      </div>
+      <button class="btn mini google hidden" id="entrarFimBtn">Entrar com Google</button>
+    </div>
+
+    <div class="screen camada hidden" id="rankingLayer" role="dialog" aria-labelledby="rankingTitulo">
+      <h2 id="rankingTitulo">Ranking geral</h2>
+      <p class="resumo" id="rankingResumo"></p>
+      <ol class="lista" id="rankingLista"></ol>
+      <p id="rankingStatus" aria-live="polite"></p>
+      <div class="menu-botoes">
+        <button class="btn sec hidden" id="rankingTentarBtn">Tentar de novo</button>
+        <button class="btn" id="rankingFecharBtn">Fechar</button>
+      </div>
+    </div>
+
+    <div class="screen camada hidden" id="apelidoLayer" role="dialog" aria-labelledby="apelidoTitulo">
+      <h2 id="apelidoTitulo">Escolha seu apelido</h2>
+      <p>É ele que aparece no ranking para todo mundo. De 3 a 16 caracteres: letras, números ou _.</p>
+      <input class="campo" id="apelidoInput" maxlength="16" autocomplete="off" spellcheck="false" aria-describedby="apelidoErro" aria-label="Apelido">
+      <p class="erro" id="apelidoErro" role="alert"></p>
+      <div class="menu-botoes">
+        <button class="btn" id="apelidoSalvarBtn">Salvar apelido</button>
+        <button class="btn sec" id="apelidoDepoisBtn">Agora não</button>
       </div>
     </div>
 
@@ -173,6 +221,7 @@
 
   <p class="help">Setas ← → para andar, ↑ ou espaço para pular, P para pausar, M liga ou desliga o som</p>
 </main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
 <script>
 const SPRITES = {"pal": {"k": "#24120a", "o": "#f49828", "d": "#c46816", "w": "#fff4e0", "W": "#e0ccaa", "b": "#3462d6", "B": "#1c3a8c", "g": "#c8d2de", "m": "#50dcff", "M": "#9664ff", "r": "#e43a2e", "R": "#a0221c", "x": "#221c28", "n": "#f08296", "K": "#18181e", "h": "#464654", "f": "#e2aa80", "F": "#b8805c", "G": "#0c0c10", "l": "#5a6478", "S": "#383a42", "T": "#26282e", "U": "#545660", "s": "#fafafa", "u": "#c4c4cc", "c": "#96969c", "e": "#46281e", "z": "#82828c"}, "tigre": {"corre": [["..........kkkkkkk.........", "........kkbbbbbbbkk.......", ".......kbbbbbbbbbbbk......", "....kkkbbbbbbbbbbbbbk.....", "...kBBBBkbbbbbbbbbbbk.kk..", "....kkkkkkkkkkkkkkkkkkok..", "......kooookooookoooook...", "......kooooooooooooooook..", ".....koGGGGGGGoGGGGGGGok..", ".....koGGuGGGGGGuGGGGGk...", ".....koGGGGGGG.kGGGGGGk...", "......koGGGGGoookGGGGGk...", "......kdoooooowwwwwwwnk...", "......kdkoooowwwwwwwwwk...", ".......kdkooowwwkkkwwk....", "........kkwwwwwwwwwwk.....", ".......kkrrrrrrrrrrrkk....", "......kxxxxxxxxxxxxxxxk...", ".....korrrrrrrrrrrrrrrok..", "....kooxxxxxxxxxxxxxxxook.", "....kokrrrrrrrrrrrrrrrkok.", "....kowkxxxxxxxxxxxxxkwok.", ".....kwkrrrrrrrrrrrrrkwk..", "......kkxxxxxxxxxxxxxkk...", "........kwwwwwwwwwwwk.....", "........kokwwwwwwwkok.....", "........kookkkkkkkook.....", ".......kookk.....kkook....", ".......kwwwk.....kwwwk....", "........kkk.......kkk....."], ["..........kkkkkkk.........", "........kkbbbbbbbkk.......", ".......kbbbbbbbbbbbk......", "....kkkbbbbbbbbbbbbbk.....", "...kBBBBkbbbbbbbbbbbk.kk..", "....kkkkkkkkkkkkkkkkkkok..", "......kooookooookoooook...", "......kooooooooooooooook..", ".....koGGGGGGGoGGGGGGGok..", ".....koGGuGGGGGGuGGGGGk...", ".....koGGGGGGG.kGGGGGGk...", "......koGGGGGoookGGGGGk...", "......kdoooooowwwwwwwnk...", "......kdkoooowwwwwwwwwk...", ".......kdkooowwwkkkwwk....", "........kkwwwwwwwwwwk.....", ".......kkrrrrrrrrrrrkk....", "......kxxxxxxxxxxxxxxxk...", ".....korrrrrrrrrrrrrrrok..", "....kooxxxxxxxxxxxxxxxook.", "....kokrrrrrrrrrrrrrrrkok.", "....kowkxxxxxxxxxxxxxkwok.", ".....kwkrrrrrrrrrrrrrkwk..", "......kkxxxxxxxxxxxxxkk...", "........kwwwwwwwwwwwk.....", "........kokwwwwwwwkok.....", "........kooookkkookk......", ".........kook..kooook.....", "........kwwwk...kwwwk.....", ".........kkk.....kkk......"]], "pulo": ["..........kkkkkkk.........", "........kkbbbbbbbkk.......", ".......kbbbbbbbbbbbk......", "....kkkbbbbbbbbbbbbbk.....", "...kBBBBkbbbbbbbbbbbk.kk..", "....kkkkkkkkkkkkkkkkkkok..", "......kooookooookoooook...", "......kooooooooooooooook..", ".....koGGGGGGGoGGGGGGGok..", ".....koGGuGGGGGGuGGGGGk...", ".....koGGGGGGG.kGGGGGGk...", "......koGGGGGoookGGGGGk...", "......kdoooooowwwwwwwnk...", "......kdkoooowwwwwwwwwk...", ".......kdkooowwwkkkwwk....", "........kkwwwwwwwwwwk.....", ".......kkrrrrrrrrrrrkk....", "......kxxxxxxxxxxxxxxxk...", ".....korrrrrrrrrrrrrrrok..", "....kooxxxxxxxxxxxxxxxook.", "....kokrrrrrrrrrrrrrrrkok.", "....kowkxxxxxxxxxxxxxkwok.", ".....kwkrrrrrrrrrrrrrkwk..", "......kkxxxxxxxxxxxxxkk...", "........kwwwwwwwwwwwk.....", "........kokwwwwwwwkok.....", "........kooook.kooook.....", ".........kwwwwkwwwwk......", "..........kkk..kkk........", ".........................."], "intro": ["..........kkkkkkk.........", "........kkbbbbbbbkk.......", ".......kbbbbbbbbbbbk......", "....kkkbbbbbbbbbbbbbk.....", "...kBBBBkbbbbbbbbbbbk.kk..", "....kkkkkkkkkkkkkkkkkkok..", "......kGGuGGGkGGuGGGGok...", "......kGGGGGkoGGGGGGok....", ".....kooooooooooooooook...", ".....kookxxoooooooxxook...", ".....kookwxooooooowxook...", "......koooooooooooooook...", "......kdoooooowwwwwwwnk...", "......kdkoooowwwwwwwwwk...", ".......kdkooowwwkkkwwk....", "........kkwwwwwwwwwwk.....", ".......kkrrrrrrrrrrrkk....", "......kxxxxxxxxxxxxxxxk...", ".....korrrrrrrrrrrrrrrok..", "....kooxxxxxxxxxxxxxxxook.", "....kokrrrrrrrrrrrrrrrkok.", "....kowkxxxxxxxxxxxxxkwok.", ".....kwkrrrrrrrrrrrrrkwk..", "......kkxxxxxxxxxxxxxkk...", "........kwwwwwwwwwwwk.....", "........kokwwwwwwwkok.....", "........kookkkkkkkook.....", ".......kookk.....kkook....", ".......kwwwk.....kwwwk....", "........kkk.......kkk....."]}, "larapio": [["........kkkkkk........", ".......kKKKKKKk.......", "......kKKKKKKKKk......", "......kKKKKKKKKk......", "......khhhhhhhhk......", "..kkkkKKKKKKKKKKkkkk..", ".kKKKKKKKKKKKKKKKKKKk.", "..kkkkkkkkkkkkkkkkkk..", "......kczfffffffk.....", "......kGGGGflGGGGk....", "......kGGGGkfGGGGk....", "......kffffffFfffk....", "......kfffffFFffffk...", "......kfeeeeeeeefk....", "......kffeeffeeffk....", ".......kfffkkfffk.....", "........kffffffk......", ".....kkkkSSSSSSSkkk...", "....kSSSSSuurruSSSSSk.", "...kSSUSSSSurrSSSSUSk.", "...kSSUSSTSSrrSSTSSUSk", "...kSSSUSSTSrrSTSSUSSk", "...kSSSSSSSTkTSSSSSSk.", "..kfkSSSSSSSkSSSSSSkfk", "..kfkSSSSSSSkSSSSSSkfk", "...kkTTTTTTTTTTTTTTkk.", "....kTTTTTTTkTTTTTTk..", "....kTTTTTTk.kTTTTTk..", "....kTTTTTk...kTTTTk..", "....kTTTTTk...kTTTTk..", "....kTTTTk.....kTTTk..", "...kTTTTk......kTTTTk.", "...kKKKKk.....kKKKKKk.", "..kKKKKKk.....kKKKKKKk", "..kkkkkk.......kkkkkk.", "......................"], ["........kkkkkk........", ".......kKKKKKKk.......", "......kKKKKKKKKk......", "......kKKKKKKKKk......", "......khhhhhhhhk......", "..kkkkKKKKKKKKKKkkkk..", ".kKKKKKKKKKKKKKKKKKKk.", "..kkkkkkkkkkkkkkkkkk..", "......kczfffffffk.....", "......kGGGGflGGGGk....", "......kGGGGkfGGGGk....", "......kffffffFfffk....", "......kfffffFFffffk...", "......kfeeeeeeeefk....", "......kffeeffeeffk....", ".......kfffkkfffk.....", "........kffffffk......", ".....kkkkSSSSSSSkkk...", "....kSSSSSuurruSSSSSk.", "...kSSUSSSSurrSSSSUSk.", "...kSSUSSTSSrrSSTSSUSk", "...kSSSUSSTSrrSTSSUSSk", "...kSSSSSSSTkTSSSSSSk.", "..kfkSSSSSSSkSSSSSSkfk", "..kfkSSSSSSSkSSSSSSkfk", "....kTTTTTTTTTTTTTTk..", ".....kTTTTTTkTTTTTk...", "......kTTTTTkTTTTk....", ".......kTTTTkTTTk.....", "........kTTTTTTTk.....", "........kTTTkTTTk.....", ".......kTTTk.kTTk.....", "......kKKKKk.kKKKk....", ".....kKKKKKk.kKKKKk...", ".....kkkkkk...kkkkk...", "......................"]]};
 "use strict";
@@ -460,6 +509,7 @@ function fimDeJogo() {
   $("recordMsg").textContent = novo ? "Novo recorde!" : "Recorde: " + brl.format(recorde);
   mostrarTela("overScreen");
   $("againBtn").focus();
+  registrarOnline(valor);
 }
 
 /* ===== Contagem regressiva ===== */
@@ -1038,6 +1088,188 @@ function desenharRuaIntro(I) {
   desenharGrande(IMG.tigreIntro, 196, GROUND - TIGRE_H * ESCALA_INTRO - pulo);
 }
 
+
+/* =========================================================
+   ONLINE — conta Google, apelido e ranking (Supabase)
+   =========================================================
+   Cole aqui os dados do SEU projeto (Supabase > Project Settings > API):
+   - url: "Project URL"
+   - chaveAnon: a chave "anon public"
+   A chave anon é PÚBLICA por natureza: ela só deixa o jogo chamar as funções
+   que o banco permite. Quem protege os dados são as regras do schema.sql.
+   Nunca coloque aqui a chave "service_role": essa sim é secreta.            */
+const SUPABASE = {
+  url: "",
+  chaveAnon: "",
+};
+
+const MENSAGENS = {
+  formato: "Use de 3 a 16 caracteres: só letras, números ou _.",
+  proibido: "Esse apelido não é permitido. Escolha outro.",
+  em_uso: "Esse apelido já está em uso. Tente outro.",
+  sem_login: "Sua sessão expirou. Entre com o Google de novo.",
+  sem_cadastro: "Escolha um apelido para entrar no ranking.",
+  muitas_partidas: "Muitas partidas em pouco tempo: esta não valeu para o ranking.",
+  pontuacao_impossivel: "O servidor recusou esta pontuação.",
+  pontuacao_invalida: "O servidor recusou esta pontuação.",
+  partida_expirada: "Esta partida demorou demais e não foi registrada.",
+  partida_invalida: "Esta partida não pôde ser registrada.",
+  partida_ja_finalizada: "Esta partida já tinha sido registrada.",
+  rede: "Sem conexão com o ranking. Sua pontuação ficou só neste aparelho.",
+};
+const msg = codigo => MENSAGENS[codigo] || MENSAGENS.rede;
+
+// Camada de acesso ao servidor. O resto do jogo só conhece estas funções,
+// então dá para trocar o Supabase por outro serviço (ou por um simulado nos testes).
+const Backend = (() => {
+  if (window.MANO_MIAU_BACKEND_SIMULADO) return window.MANO_MIAU_BACKEND_SIMULADO;
+  if (!SUPABASE.url || !SUPABASE.chaveAnon || !window.supabase) return null;
+  const sb = window.supabase.createClient(SUPABASE.url, SUPABASE.chaveAnon);
+  return {
+    async sessao() { const { data } = await sb.auth.getSession(); return data.session; },
+    aoMudarSessao(cb) { sb.auth.onAuthStateChange((_evento, sessao) => cb(sessao)); },
+    entrar() { return sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.origin + location.pathname } }); },
+    sair() { return sb.auth.signOut(); },
+    async rpc(nome, args) { const { data, error } = await sb.rpc(nome, args); if (error) throw error; return data; },
+  };
+})();
+
+const Online = { sessao: null, usuario: null, perfil: null, partida: null, erroPartida: null, apelidoAdiado: false, precisaApelido: false };
+
+async function iniciarOnline() {
+  atualizarContaUI();
+  if (!Backend) return;
+  try {
+    Backend.aoMudarSessao(s => trocarSessao(s));
+    await trocarSessao(await Backend.sessao());
+  } catch { atualizarContaUI(); }
+}
+async function trocarSessao(sessao) {
+  const id = sessao && sessao.user ? sessao.user.id : null;
+  if (id === Online.usuario) return;                        // evita carregar o mesmo perfil duas vezes
+  Online.sessao = sessao; Online.usuario = id; Online.perfil = null;
+  if (id) {
+    try { Online.perfil = await Backend.rpc("meu_perfil"); } catch { /* sem rede: segue como visitante */ }
+    if (!Online.perfil && !Online.apelidoAdiado) {
+      if (estado.modo === "menu") abrirApelido(); else Online.precisaApelido = true;
+    }
+  }
+  atualizarContaUI();
+}
+
+function atualizarMelhorMenu() {
+  const el = $("menuBest");
+  if (Online.perfil) el.textContent = "Seu melhor no ranking: " + (Online.perfil.melhor != null ? brl.format(Online.perfil.melhor) : "ainda nenhum");
+  else el.textContent = recorde > 0 ? "Melhor pontuação neste aparelho: " + brl.format(recorde) : "Melhor pontuação: ainda nenhuma";
+}
+function atualizarContaUI() {
+  atualizarMelhorMenu();
+  const caixa = $("contaMenu");
+  caixa.innerHTML = "";
+  const texto = t => { const s = document.createElement("span"); s.textContent = t; caixa.appendChild(s); };
+  const botao = (t, fn, extra = "") => { const b = document.createElement("button"); b.className = "btn mini " + extra; b.textContent = t; b.addEventListener("click", fn); caixa.appendChild(b); };
+  $("rankingBtn").classList.toggle("hidden", !Backend);
+  $("rankingFimBtn").classList.toggle("hidden", !Backend);
+  if (!Backend) { texto("Ranking online indisponível."); return; }
+  if (!Online.usuario) { texto("Entre com Google para aparecer no ranking!"); botao("Entrar com Google", entrar, "google"); return; }
+  if (!Online.perfil) { texto("Falta escolher seu apelido."); botao("Escolher apelido", abrirApelido, "google"); botao("Sair", sair, "sec"); return; }
+  texto("Jogando como " + Online.perfil.apelido); botao("Trocar apelido", abrirApelido, "sec"); botao("Sair", sair, "sec");
+}
+async function entrar() { Som.iniciar(); try { await Backend.entrar(); } catch { atualizarContaUI(); } }
+async function sair() { try { await Backend.sair(); } catch { /* ok */ } Online.apelidoAdiado = false; await trocarSessao(null); }
+
+/* ----- Apelido ----- */
+function abrirApelido() {
+  $("apelidoInput").value = Online.perfil ? Online.perfil.apelido : "";
+  $("apelidoErro").textContent = "";
+  $("apelidoLayer").classList.remove("hidden");
+  $("apelidoInput").focus();
+}
+function fecharApelido() { $("apelidoLayer").classList.add("hidden"); atualizarContaUI(); $("startBtn").focus(); }
+async function salvarApelido() {
+  const valor = $("apelidoInput").value.trim(), erro = $("apelidoErro"), btn = $("apelidoSalvarBtn");
+  if (!/^[A-Za-z0-9_]{3,16}$/.test(valor)) { erro.textContent = msg("formato"); return; }   // resposta rápida; o servidor confere de novo
+  btn.disabled = true; btn.textContent = "Salvando...";
+  try {
+    const r = await Backend.rpc("definir_apelido", { p_apelido: valor });
+    if (!r.ok) { erro.textContent = msg(r.erro); return; }
+    Online.perfil = Object.assign({}, Online.perfil, { apelido: r.apelido });
+    Som.moeda(); fecharApelido();
+  } catch { erro.textContent = msg("rede"); }
+  finally { btn.disabled = false; btn.textContent = "Salvar apelido"; }
+}
+$("apelidoInput").addEventListener("input", () => { $("apelidoErro").textContent = ""; });
+$("apelidoInput").addEventListener("keydown", ev => { if (ev.key === "Enter") salvarApelido(); });
+$("apelidoSalvarBtn").addEventListener("click", salvarApelido);
+$("apelidoDepoisBtn").addEventListener("click", () => { Online.apelidoAdiado = true; fecharApelido(); });
+
+/* ----- Partida registrada no servidor ----- */
+function abrirBilhete() {
+  Online.partida = null; Online.erroPartida = null;
+  if (!Backend || !Online.perfil) return;
+  Online.partida = Backend.rpc("iniciar_partida")
+    .then(r => { if (r && r.ok) return r.id; Online.erroPartida = r ? r.erro : "rede"; return null; })
+    .catch(() => { Online.erroPartida = "rede"; return null; });
+}
+async function registrarOnline(valor) {
+  const el = $("onlineMsg");
+  $("entrarFimBtn").classList.add("hidden");
+  if (!Backend) { el.textContent = ""; return; }
+  if (!Online.perfil) {
+    el.textContent = Online.usuario ? msg("sem_cadastro") : "Entre com Google e dispute o ranking geral com a galera!";
+    if (!Online.usuario) $("entrarFimBtn").classList.remove("hidden");
+    return;
+  }
+  el.textContent = "Enviando para o ranking...";
+  const id = await Online.partida;
+  if (!id) { el.textContent = msg(Online.erroPartida); return; }
+  try {
+    const r = await Backend.rpc("finalizar_partida", { p_id: id, p_pontuacao: Math.round(valor) });
+    if (!r.ok) el.textContent = msg(r.erro);
+    else if (!r.aceita) el.textContent = msg(r.motivo);
+    else el.textContent = "Ranking: você está em " + r.posicao + "º de " + r.total + ".";
+    if (r.ok && r.melhor != null && Online.perfil) Online.perfil.melhor = r.melhor;
+  } catch { el.textContent = msg("rede"); }
+}
+
+/* ----- Ranking completo ----- */
+async function abrirRanking() {
+  const lista = $("rankingLista"), status = $("rankingStatus"), resumo = $("rankingResumo");
+  $("rankingLayer").classList.remove("hidden");
+  $("rankingTentarBtn").classList.add("hidden");
+  lista.innerHTML = ""; resumo.textContent = ""; status.textContent = "Carregando ranking...";
+  $("rankingFecharBtn").focus();
+  try {
+    const linhas = await Backend.rpc("obter_ranking");
+    status.textContent = linhas.length ? "" : "Ninguém no ranking ainda. Seja o primeiro!";
+    let eu = null;
+    for (const l of linhas) {
+      const li = document.createElement("li");
+      const pos = document.createElement("span"), nome = document.createElement("span"), val = document.createElement("span");
+      pos.className = "pos"; pos.textContent = l.posicao + "º";
+      nome.textContent = l.apelido;                         // textContent: o apelido nunca vira código na página
+      val.className = "valor"; val.textContent = brl.format(l.melhor);
+      li.append(pos, nome, val);
+      if (l.eu) { li.classList.add("eu"); eu = { li, posicao: l.posicao }; }
+      lista.appendChild(li);
+    }
+    if (eu) {
+      resumo.textContent = "Você está em " + eu.posicao + "º de " + linhas.length + ".";
+      lista.scrollTop = eu.li.offsetTop - lista.clientHeight / 2;
+    } else if (linhas.length) {
+      resumo.textContent = !Online.usuario ? "Entre com Google para aparecer aqui." : (Online.perfil ? "Jogue uma partida para entrar no ranking." : "Escolha um apelido para entrar no ranking.");
+    }
+  } catch {
+    status.textContent = "Não foi possível carregar o ranking. Confira sua conexão e tente de novo.";
+    $("rankingTentarBtn").classList.remove("hidden");
+  }
+}
+function fecharRanking() { $("rankingLayer").classList.add("hidden"); const volta = estado.modo === "fim" ? "againBtn" : "startBtn"; $(volta).focus(); }
+$("rankingBtn").addEventListener("click", abrirRanking);
+$("rankingFimBtn").addEventListener("click", abrirRanking);
+$("rankingTentarBtn").addEventListener("click", abrirRanking);
+$("rankingFecharBtn").addEventListener("click", fecharRanking);
+$("entrarFimBtn").addEventListener("click", entrar);
 /* ===== HUD, telas e navegação ===== */
 const spansMedidor = [...$("meter").children];
 let ultimoHud = "";
@@ -1060,11 +1292,12 @@ function irMenu(comPlim) {
   Som.pararMusica();
   novoJogo("menu");
   mostrarTela("menuScreen");
-  $("menuBest").textContent = recorde > 0 ? "Melhor pontuação: " + brl.format(recorde) : "Melhor pontuação: ainda nenhuma";
   if (comPlim) Som.plim();
   $("startBtn").focus();
+  atualizarContaUI();
+  if (Online.precisaApelido) { Online.precisaApelido = false; abrirApelido(); }
 }
-function comecarPartida() { Som.iniciar(); iniciarContagem(); atualizarVisibilidade(); }
+function comecarPartida() { Som.iniciar(); abrirBilhete(); iniciarContagem(); atualizarVisibilidade(); }
 function pausar() { if (estado.modo === "jogando") { estado.modo = "pausado"; Som.pararMusica(); mostrarTela("pauseScreen"); $("resumeBtn").focus(); } }
 function continuar() { if (estado.modo === "pausado") { estado.modo = "jogando"; mostrarTela(null); Som.musica(); } }
 
@@ -1082,6 +1315,8 @@ atualizarBotaoSom();
 
 const MAPA = { ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right", ArrowUp: "jump", KeyW: "jump", Space: "jump" };
 window.addEventListener("keydown", ev => {
+  if (ev.target && ev.target.tagName === "INPUT") return;              // digitando o apelido: teclas não são do jogo
+  if (ev.code === "Escape" && !$("rankingLayer").classList.contains("hidden")) { fecharRanking(); return; }
   if (ev.code === "KeyM") { Som.iniciar(); Som.alternar(); return; }
   if (estado.modo === "intro" && (ev.code === "Space" || ev.code === "Enter")) {
     if (ev.target.closest && ev.target.closest("button")) return;   // botão focado cuida do próprio Enter
@@ -1108,6 +1343,8 @@ document.querySelectorAll(".pad").forEach(btn => {
 const introVista = (() => { try { return localStorage.getItem(CHAVE_INTRO) === "1"; } catch { return false; } })();
 if (introVista) irMenu(false);
 else { novoJogo("splash"); mostrarTela("splashScreen"); $("splashBtn").focus(); }
+
+iniciarOnline();
 
 let anterior = performance.now();
 function laco(agora) {
