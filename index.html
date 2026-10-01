@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Mano Miau — Foge do Larápio</title>
+<title>Mano Miau — Foge do Don Larápio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -67,12 +67,24 @@
   .pad.jump { width: 120px; border-radius: 36px; font-size: 13px; background: #b2456b; color: #fff6e6; }
   .pad.pressed { transform: translateY(3px); box-shadow: 0 1px 0 #120b22; }
   .help { margin: 0; font-size: 10px; line-height: 1.9; color: var(--muted); text-align: center; }
+
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .screen.poster { background: linear-gradient(to bottom, transparent 55%, rgba(16,10,30,.9) 100%); justify-content: flex-end; padding-bottom: 3%; }
+  .poster-bottom { display: flex; flex-direction: column; align-items: center; gap: .9em; }
+  .poster-bottom p { text-shadow: 2px 2px 0 #120b22; }
+  .countdown { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none;
+               font-size: clamp(28px, 9vw, 90px); color: #ffd23f; text-shadow: 4px 4px 0 #b2456b, 0 0 24px rgba(255,95,168,.6); text-align: center; }
+  .countdown.texto { font-size: clamp(16px, 4.6vw, 44px); color: #6ff3ff; text-shadow: 3px 3px 0 #2a1d45, 0 0 20px rgba(111,243,255,.7); }
+  .countdown.hidden { display: none; }
+  .countdown span { animation: pop .7s ease-out both; }
+  @keyframes pop { from { transform: scale(1.8); opacity: 0; } 30% { transform: scale(1); opacity: 1; } to { transform: scale(.95); opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .countdown span { animation: none; } }
 </style>
 </head>
 <body>
 <main class="wrap">
   <div class="stage" id="stage">
-    <canvas id="game" width="320" height="180" aria-label="Jogo Mano Miau: o tigre corre pela cidade fugindo do Larápio"></canvas>
+    <canvas id="game" width="320" height="180" aria-label="Jogo Mano Miau: o tigre corre por uma rua antiga fugindo do Don Larápio"></canvas>
 
     <div class="hud" aria-live="off">
       <div>
@@ -80,17 +92,20 @@
         <div class="small" id="bestHud">Recorde R$ 0,00</div>
       </div>
       <div class="hud-right">
-        <div class="small">Larápio</div>
+        <div class="small">Don Larápio</div>
         <div class="meter" id="meter"><span></span><span></span><span></span><span></span><span></span></div>
       </div>
     </div>
 
-    <div class="screen" id="startScreen">
-      <h1>Mano Miau</h1>
-      <p>Corre pela cidade, junta toda grana que puder e não deixa o Larápio te pegar. Cada tropeço deixa ele mais perto e leva a grana dos últimos 30 segundos.</p>
-      <button class="btn" id="startBtn">Jogar</button>
-      <p id="startBest"></p>
+    <div class="screen poster" id="startScreen">
+      <h1 class="sr-only">Mano Miau: foge do Don Larápio</h1>
+      <div class="poster-bottom">
+        <button class="btn" id="startBtn">Jogar</button>
+        <p id="startBest"></p>
+      </div>
     </div>
+
+    <div class="countdown hidden" id="countdown" aria-live="assertive"></div>
 
     <div class="screen hidden" id="pauseScreen">
       <h2>Pausado</h2>
@@ -98,7 +113,7 @@
     </div>
 
     <div class="screen hidden" id="overScreen">
-      <h2>O Larápio te pegou!</h2>
+      <h2>O Don Larápio te pegou!</h2>
       <p>Você juntou <strong id="finalMoney">R$ 0,00</strong></p>
       <p id="recordMsg"></p>
       <button class="btn" id="againBtn">Jogar de novo</button>
@@ -116,37 +131,41 @@
   <p class="help">Setas ← → para andar, ↑ ou espaço para pular, P para pausar</p>
 </main>
 <script>
-const SPRITES = {"pal": {"k": "#2b1608", "o": "#f39a2b", "d": "#c9701a", "s": "#3b200c", "w": "#fff3dc", "e": "#111111", "n": "#ff7f9c", "b": "#2f6fdb", "B": "#1f4aa0", "y": "#ffd23f", "Y": "#d9a91e", "K": "#1b1b22", "h": "#505060", "f": "#e8b48a", "F": "#c48c64", "g": "#0a0a0e", "m": "#787880", "S": "#22222b", "T": "#3a3a48", "W": "#f5f5f5", "r": "#aa2828", "G": "#8c8c96"}, "tiger": [["......kkkkkkk.....", "....kkbbbbbbbk....", "kkkkbbbbbbbbbbk...", "kBBBBkbbbbbbbbbk..", ".kkkkkkkkkkkkkkk..", "...kososooososok..", "...koooooooooooko.", "...kooooooookeook.", "...kddoooowwwwwnk.", "....kdooowwwwwwk..", ".....kkkwwwwkkk...", "....kyyyyyyyyyk...", "...koyyyyyyyyyok..", "..kooyyyyyyyyyook.", "..kkoYyyyyyyyYokk.", "....kwwwwwwwwwk...", "....kowwwwwwwok...", "....kooookooook...", "...kook....kook...", "...kkk......kkk..."], ["......kkkkkkk.....", "....kkbbbbbbbk....", "kkkkbbbbbbbbbbk...", "kBBBBkbbbbbbbbbk..", ".kkkkkkkkkkkkkkk..", "...kososooososok..", "...koooooooooooko.", "...kooooooookeook.", "...kddoooowwwwwnk.", "....kdooowwwwwwk..", ".....kkkwwwwkkk...", "....kyyyyyyyyyk...", "...koyyyyyyyyyok..", "..kooyyyyyyyyyook.", "..kkoYyyyyyyyYokk.", "....kwwwwwwwwwk...", "....kowwwwwwwok...", "....kookkkkook....", ".....kook.kook....", ".....kkk..kkk....."]], "lar": [[".....kkkkkk.....", "....kKKKKKKk....", "....kKKKKKKk....", "....khhhhhhk....", ".kkkKKKKKKKKkkk.", "..kKKKKKKKKKKKk.", "...kGfffffffk...", "...kggggfgggk...", "...kgggkfgggk...", "...kffffffffk...", "...kfmmmmmmfk...", "....kffrrfFk....", ".....kkkkkk.....", "...kSSSWWSSSk...", "..kSSSSWrSSSSk..", "..kSTSSWrSSTSk..", ".kfkSSSWrSSSkfk.", ".kfkSSSWWSSSkfk.", "..kkSSSSSSSSkk..", "...kSSSSSSSSk...", "...kSSSkkSSSk...", "...kSSSk.kSSSk..", "..kSSSk...kSSk..", "..kKKKk...kKKKk."], [".....kkkkkk.....", "....kKKKKKKk....", "....kKKKKKKk....", "....khhhhhhk....", ".kkkKKKKKKKKkkk.", "..kKKKKKKKKKKKk.", "...kGfffffffk...", "...kggggfgggk...", "...kgggkfgggk...", "...kffffffffk...", "...kfmmmmmmfk...", "....kffrrfFk....", ".....kkkkkk.....", "...kSSSWWSSSk...", "..kSSSSWrSSSSk..", "..kSTSSWrSSTSk..", ".kfkSSSWrSSSkfk.", ".kfkSSSWWSSSkfk.", "..kkSSSSSSSSkk..", "...kSSSSSSSSk...", "...kSSSSSSSk....", "....kSSSSSk.....", "....kSSkSSk.....", "...kKKKkKKKk...."]]};
+const SPRITES = {"pal": {"k": "#24120a", "o": "#f49828", "d": "#c46816", "w": "#fff4e0", "W": "#e0ccaa", "b": "#3462d6", "B": "#1c3a8c", "g": "#c8d2de", "m": "#50dcff", "M": "#9664ff", "r": "#e43a2e", "R": "#a0221c", "x": "#221c28", "n": "#f08296", "K": "#18181e", "h": "#464654", "f": "#e2aa80", "F": "#b8805c", "G": "#0c0c10", "l": "#5a6478", "S": "#383a42", "T": "#26282e", "U": "#545660", "s": "#fafafa", "u": "#c4c4cc", "c": "#96969c", "e": "#46281e", "z": "#82828c"}, "tigre": {"corre": [["..........kkkkkkk.........", "........kkbbbbbbbkk.......", ".......kbbbbbbbbbbbk......", "....kkkbbbbbbbbbbbbbk.....", "...kBBBBkbbbbbbbbbbbk.kk..", "....kkkkkkkkkkkkkkkkkkok..", "......kooookooookoooook...", "......kooooooooooooooook..", ".....kogggggggogggggggok..", ".....kogmmMmmgggmmMmmgk...", ".....kogmmmmMg.kgmmmmgk...", "......kogggggoookgggggk...", "......kdoooooowwwwwwwnk...", "......kdkoooowwwwwwwwwk...", ".......kdkooowwwkkkwwk....", "........kkwwwwwwwwwwk.....", ".......kkrrrrrrrrrrrkk....", "......kxxxxxxxxxxxxxxxk...", ".....korrrrrrrrrrrrrrrok..", "....kooxxxxxxxxxxxxxxxook.", "....kokrrrrrrrrrrrrrrrkok.", "....kowkxxxxxxxxxxxxxkwok.", ".....kwkrrrrrrrrrrrrrkwk..", "......kkxxxxxxxxxxxxxkk...", "........kwwwwwwwwwwwk.....", "........kokwwwwwwwkok.....", "........kookkkkkkkook.....", ".......kookk.....kkook....", ".......kwwwk.....kwwwk....", "........kkk.......kkk....."], ["..........kkkkkkk.........", "........kkbbbbbbbkk.......", ".......kbbbbbbbbbbbk......", "....kkkbbbbbbbbbbbbbk.....", "...kBBBBkbbbbbbbbbbbk.kk..", "....kkkkkkkkkkkkkkkkkkok..", "......kooookooookoooook...", "......kooooooooooooooook..", ".....kogggggggogggggggok..", ".....kogmmMmmgggmmMmmgk...", ".....kogmmmmMg.kgmmmmgk...", "......kogggggoookgggggk...", "......kdoooooowwwwwwwnk...", "......kdkoooowwwwwwwwwk...", ".......kdkooowwwkkkwwk....", "........kkwwwwwwwwwwk.....", ".......kkrrrrrrrrrrrkk....", "......kxxxxxxxxxxxxxxxk...", ".....korrrrrrrrrrrrrrrok..", "....kooxxxxxxxxxxxxxxxook.", "....kokrrrrrrrrrrrrrrrkok.", "....kowkxxxxxxxxxxxxxkwok.", ".....kwkrrrrrrrrrrrrrkwk..", "......kkxxxxxxxxxxxxxkk...", "........kwwwwwwwwwwwk.....", "........kokwwwwwwwkok.....", "........kooookkkookk......", ".........kook..kooook.....", "........kwwwk...kwwwk.....", ".........kkk.....kkk......"]], "pulo": ["..........kkkkkkk.........", "........kkbbbbbbbkk.......", ".......kbbbbbbbbbbbk......", "....kkkbbbbbbbbbbbbbk.....", "...kBBBBkbbbbbbbbbbbk.kk..", "....kkkkkkkkkkkkkkkkkkok..", "......kooookooookoooook...", "......kooooooooooooooook..", ".....kogggggggogggggggok..", ".....kogmmMmmgggmmMmmgk...", ".....kogmmmmMg.kgmmmmgk...", "......kogggggoookgggggk...", "......kdoooooowwwwwwwnk...", "......kdkoooowwwwwwwwwk...", ".......kdkooowwwkkkwwk....", "........kkwwwwwwwwwwk.....", ".......kkrrrrrrrrrrrkk....", "......kxxxxxxxxxxxxxxxk...", ".....korrrrrrrrrrrrrrrok..", "....kooxxxxxxxxxxxxxxxook.", "....kokrrrrrrrrrrrrrrrkok.", "....kowkxxxxxxxxxxxxxkwok.", ".....kwkrrrrrrrrrrrrrkwk..", "......kkxxxxxxxxxxxxxkk...", "........kwwwwwwwwwwwk.....", "........kokwwwwwwwkok.....", "........kooook.kooook.....", ".........kwwwwkwwwwk......", "..........kkk..kkk........", ".........................."]}, "larapio": [["........kkkkkk........", ".......kKKKKKKk.......", "......kKKKKKKKKk......", "......kKKKKKKKKk......", "......khhhhhhhhk......", "..kkkkKKKKKKKKKKkkkk..", ".kKKKKKKKKKKKKKKKKKKk.", "..kkkkkkkkkkkkkkkkkk..", "......kczfffffffk.....", "......kGGGGflGGGGk....", "......kGGGGkfGGGGk....", "......kffffffFfffk....", "......kfffffFFffffk...", "......kfeeeeeeeefk....", "......kffeeffeeffk....", ".......kfffkkfffk.....", "........kffffffk......", ".....kkkkSSSSSSSkkk...", "....kSSSSSuurruSSSSSk.", "...kSSUSSSSurrSSSSUSk.", "...kSSUSSTSSrrSSTSSUSk", "...kSSSUSSTSrrSTSSUSSk", "...kSSSSSSSTkTSSSSSSk.", "..kfkSSSSSSSkSSSSSSkfk", "..kfkSSSSSSSkSSSSSSkfk", "...kkTTTTTTTTTTTTTTkk.", "....kTTTTTTTkTTTTTTk..", "....kTTTTTTk.kTTTTTk..", "....kTTTTTk...kTTTTk..", "....kTTTTTk...kTTTTk..", "....kTTTTk.....kTTTk..", "...kTTTTk......kTTTTk.", "...kKKKKk.....kKKKKKk.", "..kKKKKKk.....kKKKKKKk", "..kkkkkk.......kkkkkk.", "......................"], ["........kkkkkk........", ".......kKKKKKKk.......", "......kKKKKKKKKk......", "......kKKKKKKKKk......", "......khhhhhhhhk......", "..kkkkKKKKKKKKKKkkkk..", ".kKKKKKKKKKKKKKKKKKKk.", "..kkkkkkkkkkkkkkkkkk..", "......kczfffffffk.....", "......kGGGGflGGGGk....", "......kGGGGkfGGGGk....", "......kffffffFfffk....", "......kfffffFFffffk...", "......kfeeeeeeeefk....", "......kffeeffeeffk....", ".......kfffkkfffk.....", "........kffffffk......", ".....kkkkSSSSSSSkkk...", "....kSSSSSuurruSSSSSk.", "...kSSUSSSSurrSSSSUSk.", "...kSSUSSTSSrrSSTSSUSk", "...kSSSUSSTSrrSTSSUSSk", "...kSSSSSSSTkTSSSSSSk.", "..kfkSSSSSSSkSSSSSSkfk", "..kfkSSSSSSSkSSSSSSkfk", "....kTTTTTTTTTTTTTTk..", ".....kTTTTTTkTTTTTk...", "......kTTTTTkTTTTk....", ".......kTTTTkTTTk.....", "........kTTTTTTTk.....", "........kTTTkTTTk.....", ".......kTTTk.kTTk.....", "......kKKKKk.kKKKk....", ".....kKKKKKk.kKKKKk...", ".....kkkkkk...kkkkk...", "......................"]]};
 "use strict";
 
 /* =========================================================
-   CONFIG — números de balanceamento do jogo.
-   Mexa aqui para deixar o jogo mais fácil ou mais difícil.
+   CONFIG — números de balanceamento (regras iguais à v1).
+   Só o pulo subiu, porque os personagens ficaram maiores.
    ========================================================= */
 const CONFIG = {
-  velocidadeInicial: 80,          // px por segundo no começo
-  aceleracao: 2.2,                // quanto a velocidade cresce a cada segundo (sem limite)
+  velocidadeInicial: 80,
+  aceleracao: 2.2,
   gravidade: 900,
-  forcaPulo: 300,
-  velocidadeAndar: 120,           // andar para frente/trás dentro da tela
-  tropecosParaCaptura: 5,         // spec: 5 tropeços e o Larápio pega
+  forcaPulo: 340,                 // v1: 300. Maior porque o tigre e os obstáculos cresceram
+  velocidadeAndar: 120,
+  tropecosParaCaptura: 5,
   segundosSemTropecoParaRecuperar: 6,
-  segundosPorRecuperacao: 7,      // depois disso, a cada 7 s o Larápio fica 1 passo para trás
-  janelaPenalidade: 30,           // spec: perde o que ganhou nos últimos 30 s
+  segundosPorRecuperacao: 7,
+  janelaPenalidade: 30,
   invencivelAposTropeco: 1.2,
   intervaloObstaculoInicial: 1.6,
-  intervaloObstaculoMinimo: 0.55,
+  intervaloObstaculoMinimo: 0.6,
   chanceNota: 0.4,
-  // [valor, peso] — quanto maior o peso, mais comum
+  carroAPartirDe: 25,             // antes disso o carro é longo demais para a velocidade (teste de pulabilidade)
   notas: [[2, 35], [5, 25], [10, 18], [20, 12], [50, 7], [100, 3]],
+  contagem: ["3", "2", "1", "Se prepareeee!"],
+  tempoPorPassoDaContagem: 0.8,
 };
 
-const W = 320, H = 180, GROUND = 160;
+const W = 320, H = 180, GROUND = 166;
 const CHAVE_RECORDE = "mano-miau-recorde";
 const reduzMovimento = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+const rnd = (a, b) => a + Math.random() * (b - a);
+const $ = id => document.getElementById(id);
 
-/* ===== Sprites: transforma o desenho em texto em imagem ===== */
+/* ===== Sprites ===== */
 function criarSprite(linhas) {
   const c = document.createElement("canvas");
   c.width = linhas[0].length; c.height = linhas.length;
@@ -156,110 +175,210 @@ function criarSprite(linhas) {
   }));
   return c;
 }
-const IMG = { tigre: SPRITES.tiger.map(criarSprite), larapio: SPRITES.lar.map(criarSprite) };
+const IMG = {
+  tigreCorre: SPRITES.tigre.corre.map(criarSprite),
+  tigrePulo: criarSprite(SPRITES.tigre.pulo),
+  larapio: SPRITES.larapio.map(criarSprite),
+};
+const TIGRE_W = IMG.tigrePulo.width, TIGRE_H = IMG.tigrePulo.height;      // 26 x 30
+const LAR_W = IMG.larapio[0].width, LAR_H = IMG.larapio[0].height;         // 22 x 36
 
-/* ===== Recorde salvo no navegador ===== */
-function lerRecorde() {
-  try { return Number(localStorage.getItem(CHAVE_RECORDE)) || 0; } catch { return 0; }
+/* ===== Fonte de pixel 3x5 (para os letreiros de neon) ===== */
+const FONTE = {
+  A:"010101111101101", B:"110101110101110", C:"011100100100011", D:"110101101101110",
+  E:"111100110100111", F:"111100110100100", G:"011100101101011", H:"101101111101101",
+  I:"111010010010111", L:"100100100100111", M:"101111111101101", N:"110101101101101",
+  O:"010101101101010", P:"110101110100100", R:"110101110101101", S:"011100010001110",
+  T:"111010010010010", U:"101101101101111", " ":"000000000000000",
+};
+function escrever(g, txt, x, y, escala, cor, vertical = false) {
+  [...txt].forEach((ch, i) => {
+    const bits = FONTE[ch] || FONTE[" "];
+    const ox = vertical ? x : x + i * 4 * escala, oy = vertical ? y + i * 6 * escala : y;
+    g.fillStyle = cor;
+    for (let p = 0; p < 15; p++) if (bits[p] === "1") g.fillRect(ox + (p % 3) * escala, oy + Math.floor(p / 3) * escala, escala, escala);
+  });
 }
-function salvarRecorde(v) {
-  try { localStorage.setItem(CHAVE_RECORDE, String(v)); } catch { /* sem armazenamento: segue o jogo */ }
+function neon(g, txt, x, y, escala, cor, brilho, vertical = false) {
+  g.globalAlpha = 0.35;
+  for (const [dx, dy] of [[-1,0],[1,0],[0,-1],[0,1]]) escrever(g, txt, x + dx, y + dy, escala, brilho, vertical);
+  g.globalAlpha = 1;
+  escrever(g, txt, x, y, escala, cor, vertical);
 }
 
-/* ===== Cenário (prédios gerados uma vez) ===== */
-function gerarPredios(total, wMin, wMax, hMin, hMax) {
-  const lista = []; let x = 0;
-  while (x < total) {
-    const w = wMin + Math.floor(Math.random() * (wMax - wMin));
-    const h = hMin + Math.floor(Math.random() * (hMax - hMin));
-    const janelas = [];
-    for (let jy = 6; jy < h - 4; jy += 6) for (let jx = 3; jx < w - 3; jx += 5)
-      if (Math.random() < 0.3) janelas.push([jx, jy]);
-    lista.push({ x, w, h, janelas }); x += w + 2;
+/* ===== Cenário: camadas desenhadas uma única vez ===== */
+const CHAO_FACHADA = 142;   // onde terminam os prédios
+function novaCamada(w, h) { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; }
+
+// Camada de fundo: silhueta da cidade
+const FUNDO = novaCamada(480, H);
+(() => {
+  const g = FUNDO.getContext("2d");
+  let x = 0;
+  while (x < 480) {
+    const w = Math.floor(rnd(20, 40)), h = Math.floor(rnd(40, 80));
+    g.fillStyle = "#3a3463"; g.fillRect(x, CHAO_FACHADA - h, w, h);
+    if (Math.random() < 0.25) { g.fillRect(x + w / 2 - 3, CHAO_FACHADA - h - 12, 6, 12); g.fillRect(x + w / 2 - 1, CHAO_FACHADA - h - 18, 2, 6); }
+    g.fillStyle = "#e39a7a";
+    for (let jy = 6; jy < h - 6; jy += 7) for (let jx = 4; jx < w - 4; jx += 6)
+      if (Math.random() < 0.2) g.fillRect(x + jx, CHAO_FACHADA - h + jy, 1, 2);
+    x += w;
   }
-  return { lista, total: x };
-}
-const LONGE = gerarPredios(480, 18, 34, 34, 80);
-const PERTO = gerarPredios(560, 24, 46, 18, 50);
+})();
 
-/* ===== Entrada (teclado + toque) ===== */
+// Camada do meio: fachadas antigas com sacadas, toldos e neon
+const PAREDES = ["#7a4a44", "#8a6a44", "#4c6458", "#7a4a62", "#5e5a7a", "#8a5a3a"];
+const LETREIROS = [["CAFE", "#ff5fa8", "#ff9ccd"], ["BAR", "#6ff3ff", "#b8faff"], ["HOTEL", "#ff4a3a", "#ff9a8a"],
+                   ["CINE", "#ffd23f", "#ffe9a0"], ["SAMBA", "#7dff9a", "#c4ffd2"], ["BARBEARIA", "#6ff3ff", "#b8faff"]];
+const MEIO = novaCamada(720, H);
+(() => {
+  const g = MEIO.getContext("2d");
+  let x = 0, n = 0;
+  while (x < 720 - 40) {
+    const w = Math.floor(rnd(44, 70)), andares = Math.random() < 0.5 ? 2 : 3, h = andares * 26 + 12;
+    const topo = CHAO_FACHADA - h, parede = PAREDES[n % PAREDES.length];
+    g.fillStyle = parede; g.fillRect(x, topo, w, h);
+    g.fillStyle = "rgba(20,10,30,.28)"; g.fillRect(x, topo, w, h);           // luz do entardecer
+    g.fillStyle = "#2a1d35"; g.fillRect(x, topo, w, 3); g.fillRect(x, topo, 1, h); // cornija e divisa
+    for (let a = 0; a < andares; a++) {
+      const ay = topo + 8 + a * 26;
+      for (let jx = 6; jx < w - 10; jx += 14) {
+        const acesa = Math.random() < 0.55;
+        g.fillStyle = "#2a1d35"; g.fillRect(x + jx - 1, ay - 1, 9, 14);
+        g.fillStyle = acesa ? "#ffcf7a" : "#3b3355"; g.fillRect(x + jx, ay, 7, 12);
+        if (acesa) { g.fillStyle = "#e8a04e"; g.fillRect(x + jx, ay + 8, 7, 4); }
+        g.fillStyle = "#2a1d35"; g.fillRect(x + jx + 3, ay, 1, 12);
+      }
+      if (a > 0 && Math.random() < 0.6) {                                      // sacada
+        g.fillStyle = "#1e1428"; g.fillRect(x + 3, ay + 12, w - 6, 2);
+        for (let bx = x + 3; bx < x + w - 3; bx += 3) g.fillRect(bx, ay + 7, 1, 5);
+        g.fillRect(x + 3, ay + 7, w - 6, 1);
+      }
+    }
+    // térreo: porta e vitrine com toldo listrado
+    const ty = CHAO_FACHADA - 18;
+    g.fillStyle = "#ffcf7a"; g.fillRect(x + 6, ty + 4, w - 22, 14);
+    g.fillStyle = "#2a1d35"; g.fillRect(x + w - 13, ty + 2, 8, 16);
+    const toldo = ["#c0392b", "#2e7d5b", "#2f5fd0"][n % 3];
+    for (let tx = 0; tx < w - 8; tx++) { g.fillStyle = Math.floor(tx / 4) % 2 ? "#f3e6d0" : toldo; g.fillRect(x + 4 + tx, ty - 2, 1, 5); }
+    // letreiro de neon
+    const [txt, cor, brilho] = LETREIROS[n % LETREIROS.length];
+    if (txt.length > 5) { g.fillStyle = "#1a1024"; g.fillRect(x + w - 10, topo + 4, 9, txt.length * 6 + 4); neon(g, txt, x + w - 8, topo + 6, 1, cor, brilho, true); }
+    else { const lw = txt.length * 4 * 2; g.fillStyle = "#1a1024"; g.fillRect(x + (w - lw) / 2 - 3, ty - 16, lw + 4, 13); neon(g, txt, x + (w - lw) / 2, ty - 14, 2, cor, brilho); }
+    x += w + 2; n++;
+  }
+  // carros antigos estacionados (decoração)
+  for (let cx = 30; cx < 720; cx += Math.floor(rnd(140, 200))) desenharCarro(g, cx, CHAO_FACHADA + 2, ["#2f4a4f", "#7a5a2e", "#5a2e3a"][cx % 3], 0.8);
+})();
+var MEIO_W = 720;
+
+// Calçada e paralelepípedos (padrão que se repete)
+const CHAO = novaCamada(64, H - CHAO_FACHADA);
+(() => {
+  const g = CHAO.getContext("2d");
+  g.fillStyle = "#6e6070"; g.fillRect(0, 0, 64, 8);                       // calçada
+  g.fillStyle = "#5a4e5e"; for (let x = 0; x < 64; x += 16) g.fillRect(x, 0, 1, 8);
+  g.fillStyle = "#3e3446"; g.fillRect(0, 8, 64, 2);                       // meio-fio
+  g.fillStyle = "#3a3040"; g.fillRect(0, 10, 64, H - CHAO_FACHADA - 10);  // rua
+  for (let r = 0, y = 11; y < H - CHAO_FACHADA; r++, y += 5) {
+    for (let x = (r % 2) * 4 - 4; x < 64; x += 8) {
+      g.fillStyle = (r + x) % 3 ? "#564a5c" : "#5e5264"; g.fillRect(x + 1, y, 6, 4);
+      g.fillStyle = "#6c6072"; g.fillRect(x + 1, y, 6, 1);
+    }
+  }
+})();
+
+function desenharCarro(g, x, chao, cor, escala = 1) {
+  // carro antigo de perfil, ~34 x 15
+  const r = (a, b, w, h, c) => { g.fillStyle = c; g.fillRect(Math.round(x + a * escala), Math.round(chao - b * escala), Math.ceil(w * escala), Math.ceil(h * escala)); };
+  r(2, 9, 30, 5, cor);             // corpo
+  r(0, 7, 34, 3, cor);             // para-lamas
+  r(9, 14, 15, 5, cor);            // cabine
+  r(11, 13, 5, 3, "#9fc6d6"); r(18, 13, 5, 3, "#9fc6d6"); // vidros
+  r(0, 5, 34, 1, "#c9c9d2");       // para-choque cromado
+  r(31, 9, 2, 2, "#ffe9a0");       // farol
+  r(4, 4, 7, 4, "#1a1420"); r(23, 4, 7, 4, "#1a1420");    // rodas
+  r(6, 3, 3, 2, "#9a9aa6"); r(25, 3, 3, 2, "#9a9aa6");
+}
+
+/* ===== Recorde ===== */
+function lerRecorde() { try { return Number(localStorage.getItem(CHAVE_RECORDE)) || 0; } catch { return 0; } }
+function salvarRecorde(v) { try { localStorage.setItem(CHAVE_RECORDE, String(v)); } catch { /* segue sem salvar */ } }
+
+/* ===== Entrada ===== */
 const input = { left: false, right: false, jump: false, jumpPressionado: false };
 function setTecla(nome, ativo) {
-  if (nome === "jump") {
-    if (ativo && !input.jump) input.jumpPressionado = true;
-  }
+  if (nome === "jump" && ativo && !input.jump) input.jumpPressionado = true;
   input[nome] = ativo;
 }
 
-/* ===== Estado do jogo ===== */
+/* ===== Estado ===== */
 let estado;
 let recorde = lerRecorde();
-
-function novoJogo() {
+function novoJogo(modo = "jogando") {
   estado = {
-    modo: "jogando", t: 0, velocidade: CONFIG.velocidadeInicial, scroll: 0,
+    modo, t: 0, velocidade: CONFIG.velocidadeInicial, scroll: 0, relogio: 0,
     dinheiro: 0, historico: [], tropecos: 0, semTropeco: 0, relogioRecuperacao: 0,
-    jogador: { x: 90, y: GROUND, vy: 0, noChao: true, invencivel: 0 },
-    larapio: { x: -10 }, tempoCaptura: 0,
+    jogador: { x: 100, y: GROUND, vy: 0, noChao: true, invencivel: 0 },
+    larapio: { x: -LAR_W }, tempoCaptura: 0, contagem: 0,
     obstaculos: [], itens: [], particulas: [], textos: [],
-    proxObstaculo: 1.2, proxMoedas: 0.6, tremor: 0,
+    proxObstaculo: 1.2, proxMoedas: 0.6, tremor: 0, postes: 40,
   };
 }
 
-/* ===== Geração de obstáculos e dinheiro ===== */
+/* ===== Obstáculos e dinheiro ===== */
 const TIPOS = {
-  cone:     { w: 9,  h: 12 },
-  caixote:  { w: 14, h: 14 },
-  cavalete: { w: 20, h: 12 },
+  hidrante: { w: 10, h: 16 },
+  lixeira:  { w: 14, h: 18 },
+  caixote:  { w: 18, h: 13 },
+  carro:    { w: 34, h: 15 },
 };
 function sortearNota() {
   const total = CONFIG.notas.reduce((s, n) => s + n[1], 0);
   let r = Math.random() * total;
-  for (const [valor, peso] of CONFIG.notas) { if ((r -= peso) < 0) return valor; }
+  for (const [valor, peso] of CONFIG.notas) if ((r -= peso) < 0) return valor;
   return 2;
 }
-function criarObstaculo(x) {
-  const nomes = Object.keys(TIPOS);
-  const tipo = nomes[Math.floor(Math.random() * nomes.length)];
-  const o = { tipo, x, w: TIPOS[tipo].w, h: TIPOS[tipo].h, atingido: false, queda: 0 };
+function criarObstaculo(x, permitirCarro) {
+  const nomes = ["hidrante", "lixeira", "caixote"];
+  const tipo = permitirCarro && Math.random() < 0.18 ? "carro" : nomes[Math.floor(Math.random() * nomes.length)];
+  const o = { tipo, x, w: TIPOS[tipo].w, h: TIPOS[tipo].h, atingido: false, queda: 0,
+              cor: ["#2f4a4f", "#7a5a2e", "#6a2e3a", "#2e3a6a"][Math.floor(Math.random() * 4)] };
   estado.obstaculos.push(o);
-  // Risco x recompensa: quanto maior a nota, mais perigosa a posição
-  if (Math.random() < CONFIG.chanceNota) {
+  if (Math.random() < CONFIG.chanceNota) {                 // risco x recompensa
     const valor = sortearNota();
     let nx = o.x + o.w / 2 - 6, ny;
-    if (valor >= 50) ny = GROUND - 62;            // só com pulo cheio, bem em cima do obstáculo
-    else if (valor === 20) { nx = o.x - 16; ny = GROUND - 12; } // colada na frente do obstáculo
-    else ny = GROUND - o.h - 18;                  // pulo normal por cima
+    if (valor >= 50) ny = GROUND - 80;                      // só com pulo cheio
+    else if (valor === 20) { nx = o.x - 18; ny = GROUND - 16; } // colada na frente
+    else ny = GROUND - o.h - 24;                            // pulo normal
     estado.itens.push({ tipo: "nota", valor, x: nx, y: ny, w: 12, h: 7, fase: Math.random() * 6 });
   }
   return o;
 }
 function gerarObstaculos() {
-  const o = criarObstaculo(W + 10);
   const t = estado.t;
-  if (t > 35 && Math.random() < Math.min(0.35, (t - 35) / 150)) criarObstaculo(o.x + o.w + 16);
+  const o = criarObstaculo(W + 10, t > CONFIG.carroAPartirDe);
+  if (o.tipo !== "carro" && t > 35 && Math.random() < Math.min(0.35, (t - 35) / 150)) criarObstaculo(o.x + o.w + 20, false);
   const base = Math.max(CONFIG.intervaloObstaculoMinimo, CONFIG.intervaloObstaculoInicial - t * 0.012);
-  estado.proxObstaculo = Math.max(base * (0.75 + Math.random() * 0.7), 70 / estado.velocidade);
+  estado.proxObstaculo = Math.max(base * rnd(0.75, 1.45), (o.tipo === "carro" ? 110 : 80) / estado.velocidade);
 }
 function gerarMoedas() {
-  const n = 4 + Math.floor(Math.random() * 3);
-  const arco = Math.random() < 0.45;
+  const n = 4 + Math.floor(Math.random() * 3), arco = Math.random() < 0.45;
   for (let i = 0; i < n; i++) {
     const p = i / (n - 1);
-    const y = arco ? GROUND - 12 - Math.sin(p * Math.PI) * 30 : GROUND - 12;
-    estado.itens.push({ tipo: "moeda", valor: 1, x: W + 10 + i * 12, y, w: 6, h: 6, fase: i * 0.4 });
+    const y = arco ? GROUND - 14 - Math.sin(p * Math.PI) * 40 : GROUND - 14;
+    estado.itens.push({ tipo: "moeda", valor: 1, x: W + 10 + i * 13, y, w: 7, h: 7, fase: i * 0.4 });
   }
-  estado.proxMoedas = 1.4 + Math.random() * 1.2;
+  estado.proxMoedas = rnd(1.4, 2.6);
 }
 
-/* ===== Regras ===== */
-function caixaJogador() {
-  const j = estado.jogador;
-  return { x: j.x + 4, y: j.y - 18, w: 10, h: 17 };
+/* ===== Regras (iguais à v1) ===== */
+function caixaJogador() { const j = estado.jogador; return { x: j.x + 6, y: j.y - 27, w: 14, h: 26 }; }
+function caixaObstaculo(o) {
+  return o.tipo === "carro" ? { x: o.x + 2, y: GROUND - 10, w: o.w - 4, h: 10 }   // a cabine não conta: dá pra raspar no teto
+                            : { x: o.x + 1, y: GROUND - o.h + 2, w: o.w - 2, h: o.h - 2 };
 }
-function colide(a, b) {
-  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
-}
+const colide = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 function textoFlutuante(txt, x, y, cor) { estado.textos.push({ txt, x, y, cor, vida: 0.9 }); }
 
 function coletar(item) {
@@ -268,37 +387,29 @@ function coletar(item) {
   estado.historico.push({ t: estado.t, valor: item.valor });
   if (item.tipo === "nota") textoFlutuante("+R$" + item.valor, item.x + 6, item.y - 2, "#ffd23f");
 }
-
 function tropecar(o) {
-  const e = estado;
+  const e = estado, j = e.jogador;
   o.atingido = true;
-  e.tropecos++;
-  e.semTropeco = 0; e.relogioRecuperacao = 0;
-  // Penalidade: tudo o que entrou nos últimos 30 s
+  e.tropecos++; e.semTropeco = 0; e.relogioRecuperacao = 0;
   const perda = e.historico.filter(h => h.t >= e.t - CONFIG.janelaPenalidade).reduce((s, h) => s + h.valor, 0);
-  e.historico = []; // o que já foi cobrado não é cobrado de novo
+  e.historico = [];                               // v1: o que já foi cobrado não é cobrado de novo
   e.dinheiro = Math.max(0, e.dinheiro - perda);
-  const j = e.jogador;
   if (perda > 0) {
-    textoFlutuante("-R$" + perda, j.x + 9, j.y - 26, "#ff6b5e");
-    for (let i = 0; i < Math.min(10, 3 + perda / 10); i++)
-      e.particulas.push({ x: j.x + 9, y: j.y - 12, vx: -60 + Math.random() * 120, vy: -120 - Math.random() * 80, vida: 0.9 });
-  } else textoFlutuante("Ai!", j.x + 9, j.y - 26, "#ff6b5e");
+    textoFlutuante("-R$" + perda, j.x + 13, j.y - 36, "#ff6b5e");
+    for (let i = 0; i < Math.min(12, 3 + perda / 10); i++)
+      e.particulas.push({ x: j.x + 13, y: j.y - 16, vx: rnd(-70, 70), vy: rnd(-200, -120), vida: 0.9 });
+  } else textoFlutuante("Ai!", j.x + 13, j.y - 36, "#ff6b5e");
   j.invencivel = CONFIG.invencivelAposTropeco;
   if (!reduzMovimento) e.tremor = 0.25;
   if (e.tropecos >= CONFIG.tropecosParaCaptura) capturar();
 }
-
 function capturar() {
-  estado.modo = "capturado";
-  estado.tempoCaptura = 0;
-  textoFlutuante("Peguei!", estado.jogador.x + 9, estado.jogador.y - 30, "#ffffff");
+  estado.modo = "capturado"; estado.tempoCaptura = 0;
+  textoFlutuante("Peguei!", estado.jogador.x + 13, estado.jogador.y - 40, "#ffffff");
 }
-
 function fimDeJogo() {
   estado.modo = "fim";
-  const valor = estado.dinheiro;
-  const novo = valor > recorde;
+  const valor = estado.dinheiro, novo = valor > recorde;
   if (novo) { recorde = valor; salvarRecorde(recorde); }
   $("finalMoney").textContent = brl.format(valor);
   $("recordMsg").textContent = novo ? "Novo recorde!" : "Recorde: " + brl.format(recorde);
@@ -306,74 +417,87 @@ function fimDeJogo() {
   $("againBtn").focus();
 }
 
-/* ===== Atualização por quadro ===== */
+/* ===== Contagem regressiva ===== */
+function iniciarContagem() {
+  novoJogo("contagem");
+  ultimoHud = "";
+  mostrarTela(null);
+  mostrarPassoContagem(0);
+}
+function mostrarPassoContagem(i) {
+  const el = $("countdown");
+  el.classList.remove("hidden");
+  el.classList.toggle("texto", CONFIG.contagem[i].length > 1);
+  el.innerHTML = "";
+  const span = document.createElement("span");
+  span.textContent = CONFIG.contagem[i];
+  el.appendChild(span);
+}
+function atualizarContagem(dt) {
+  const e = estado;
+  const antes = Math.floor(e.contagem / CONFIG.tempoPorPassoDaContagem);
+  e.contagem += dt;
+  const passo = Math.floor(e.contagem / CONFIG.tempoPorPassoDaContagem);
+  e.larapio.x += (-14 - e.larapio.x) * Math.min(1, dt * 2);     // ele aparece na esquina
+  if (passo >= CONFIG.contagem.length) { $("countdown").classList.add("hidden"); e.modo = "jogando"; return; }
+  if (passo !== antes) mostrarPassoContagem(passo);
+}
+
+/* ===== Atualização ===== */
 function atualizar(dt) {
   const e = estado, j = e.jogador, L = e.larapio;
-
+  e.relogio += dt;
+  if (e.modo === "contagem") { atualizarContagem(dt); return; }
   if (e.modo === "capturado") {
     e.tempoCaptura += dt;
-    L.x += (j.x - 8 - L.x) * Math.min(1, dt * 6);
+    L.x += (j.x - 10 - L.x) * Math.min(1, dt * 6);
     atualizarEfeitos(dt);
     if (e.tempoCaptura > 1.4) fimDeJogo();
     return;
   }
-
   e.t += dt;
   e.velocidade = CONFIG.velocidadeInicial + CONFIG.aceleracao * e.t;
   const dx = e.velocidade * dt;
   e.scroll += dx;
 
-  // Movimento do tigre
   const dir = (input.right ? 1 : 0) - (input.left ? 1 : 0);
-  j.x = Math.min(W - 60, Math.max(6, j.x + dir * CONFIG.velocidadeAndar * dt));
+  j.x = Math.min(W - 80, Math.max(4, j.x + dir * CONFIG.velocidadeAndar * dt));
   if (input.jumpPressionado && j.noChao) { j.vy = -CONFIG.forcaPulo; j.noChao = false; }
   input.jumpPressionado = false;
-  if (!input.jump && j.vy < -120) j.vy = -120;   // soltar cedo = pulo mais baixo
-  j.vy += CONFIG.gravidade * dt;
-  j.y += j.vy * dt;
+  if (!input.jump && j.vy < -130) j.vy = -130;
+  j.vy += CONFIG.gravidade * dt; j.y += j.vy * dt;
   if (j.y >= GROUND) { j.y = GROUND; j.vy = 0; j.noChao = true; }
   j.invencivel = Math.max(0, j.invencivel - dt);
 
-  // Geração
   if ((e.proxObstaculo -= dt) <= 0) gerarObstaculos();
   if ((e.proxMoedas -= dt) <= 0) gerarMoedas();
-
-  // Mundo andando
   for (const o of e.obstaculos) o.x -= dx;
   for (const i of e.itens) i.x -= dx;
-  e.obstaculos = e.obstaculos.filter(o => o.x > -40);
+  e.obstaculos = e.obstaculos.filter(o => o.x > -50);
   e.itens = e.itens.filter(i => i.x > -20 && !i.coletado);
 
-  // Colisões
   const cj = caixaJogador();
   for (const i of e.itens) if (colide(cj, i)) coletar(i);
-  if (j.invencivel <= 0) {
-    for (const o of e.obstaculos) {
-      if (!o.atingido && colide(cj, { x: o.x + 1, y: GROUND - o.h + 2, w: o.w - 2, h: o.h - 2 })) { tropecar(o); break; }
-    }
-  }
+  if (j.invencivel <= 0)
+    for (const o of e.obstaculos) if (!o.atingido && colide(cj, caixaObstaculo(o))) { tropecar(o); break; }
   if (e.modo !== "jogando") return;
 
-  // Recuperação: sem tropeçar por um tempo, o Larápio fica para trás
   e.semTropeco += dt;
   if (e.tropecos > 0 && e.semTropeco >= CONFIG.segundosSemTropecoParaRecuperar) {
     e.relogioRecuperacao += dt;
     if (e.relogioRecuperacao >= CONFIG.segundosPorRecuperacao) {
       e.tropecos--; e.relogioRecuperacao = 0;
-      textoFlutuante("Despistou!", j.x + 9, j.y - 26, "#7dffb0");
+      textoFlutuante("Despistou!", j.x + 13, j.y - 36, "#7dffb0");
     }
   }
-
-  // Larápio se aproxima conforme os tropeços
-  const alvo = -10 + e.tropecos * 12;
+  const alvo = -14 + e.tropecos * 14;
   L.x += (alvo - L.x) * Math.min(1, dt * 3);
-  if (j.x + 4 < L.x + 13) capturar();   // recuar demais = cair nas mãos dele
-
+  if (j.x + 6 < L.x + LAR_W - 4) capturar();
   atualizarEfeitos(dt);
 }
 function atualizarEfeitos(dt) {
   const e = estado;
-  for (const p of e.particulas) { p.vy += 500 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vida -= dt; }
+  for (const p of e.particulas) { p.vy += 520 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vida -= dt; }
   e.particulas = e.particulas.filter(p => p.vida > 0);
   for (const t of e.textos) { t.y -= 18 * dt; t.vida -= dt; }
   e.textos = e.textos.filter(t => t.vida > 0);
@@ -382,104 +506,131 @@ function atualizarEfeitos(dt) {
 }
 
 /* ===== Desenho ===== */
-const cv = document.getElementById("game");
-const ctx = cv.getContext("2d");
+const cv = $("game"), ctx = cv.getContext("2d");
 ctx.imageSmoothingEnabled = false;
+const CEU = ["#211c45", "#2e2656", "#443266", "#653f6e", "#8f4f72", "#bd6670", "#e08a6c"];
+const ESTRELAS = Array.from({ length: 24 }, () => [Math.floor(rnd(0, W)), Math.floor(rnd(2, 50))]);
 
-const CEU = ["#1e1436", "#3b2160", "#6b2f6e", "#b2456b", "#ec7a4f", "#ffb35c"];
-function desenharCenario(scroll) {
-  const faixa = 18;
-  CEU.forEach((c, i) => { ctx.fillStyle = c; ctx.fillRect(-4, i * faixa - (i ? 0 : 4), W + 8, faixa + 1 + (i ? 0 : 4)); });
-  ctx.fillStyle = CEU[5]; ctx.fillRect(-4, CEU.length * faixa, W + 8, GROUND);
-  // Sol retrô com faixas
-  ctx.fillStyle = "#ffd38a";
-  for (let y = -20; y <= 20; y++) {
-    if (y > 4 && y % 4 === 0) continue;
-    const meia = Math.floor(Math.sqrt(400 - y * y));
-    ctx.fillRect(240 - meia, 96 + y, meia * 2, 1);
-  }
-  desenharPredios(LONGE, scroll * 0.2, "#2f1d4f", "#f59a7a", 0.35);
-  desenharPredios(PERTO, scroll * 0.5, "#1a1030", "#f59a7a", 0.5);
-  // Calçada e rua
-  ctx.fillStyle = "#5a4672"; ctx.fillRect(-4, GROUND, W + 8, 6);
-  ctx.fillStyle = "#3d2f52";
-  const off = scroll % 16;
-  for (let x = -off; x < W; x += 16) ctx.fillRect(Math.round(x), GROUND, 1, 6);
-  ctx.fillStyle = "#2a2233"; ctx.fillRect(-4, GROUND + 6, W + 8, H - GROUND + 2);
-  ctx.fillStyle = "#c9b8e0";
-  const off2 = scroll % 40;
-  for (let x = -off2; x < W; x += 40) ctx.fillRect(Math.round(x), GROUND + 12, 18, 2);
+function repetir(img, desloc, largura, y = 0) {
+  const base = Math.floor(desloc % largura);
+  for (let x = -base; x < W; x += largura) ctx.drawImage(img, x, y);
 }
-function desenharPredios(camada, desloc, cor, corJanela, alpha) {
-  const base = desloc % camada.total;
-  for (let rep = 0; rep < 2; rep++) {
-    for (const p of camada.lista) {
-      const x = Math.round(p.x - base + rep * camada.total);
-      if (x > W || x + p.w < 0) continue;
-      ctx.fillStyle = cor; ctx.fillRect(x, GROUND - p.h, p.w, p.h);
-      ctx.globalAlpha = alpha; ctx.fillStyle = corJanela;
-      for (const [jx, jy] of p.janelas) ctx.fillRect(x + jx, GROUND - p.h + jy, 1, 2);
-      ctx.globalAlpha = 1;
-    }
-  }
+function desenharCenario(scroll) {
+  const faixa = 16;
+  CEU.forEach((c, i) => { ctx.fillStyle = c; ctx.fillRect(-4, i * faixa - (i ? 0 : 4), W + 8, faixa + (i ? 1 : 5)); });
+  ctx.fillStyle = CEU[CEU.length - 1]; ctx.fillRect(-4, CEU.length * faixa, W + 8, H);
+  ctx.fillStyle = "#fff6e6";
+  for (const [x, y] of ESTRELAS) if ((x + Math.floor(estado.relogio * 2)) % 7) ctx.fillRect(x, y, 1, 1);
+  // fios elétricos
+  ctx.fillStyle = "#1e1630";
+  const fio = scroll * 0.3 % 80;
+  for (let x = -fio; x < W + 80; x += 80) for (let i = 0; i < 80; i++) ctx.fillRect(Math.round(x + i), 34 + Math.round(Math.sin(i / 80 * Math.PI) * 6), 1, 1);
+  repetir(FUNDO, scroll * 0.15, 480);
+  repetir(MEIO, scroll * 0.45, MEIO_W);
+  // chão: calçada + paralelepípedos
+  const base = Math.floor(scroll % 64);
+  for (let x = -base - 4; x < W + 4; x += 64) ctx.drawImage(CHAO, x, CHAO_FACHADA);
+  // postes de luz na calçada (mesma velocidade da rua)
+  const pp = Math.floor(scroll % 150);
+  for (let x = 60 - pp; x < W + 150; x += 150) desenharPoste(x);
+}
+function desenharPoste(x) {
+  ctx.fillStyle = "#1a1424"; ctx.fillRect(x, 92, 3, CHAO_FACHADA + 4 - 92); ctx.fillRect(x - 2, CHAO_FACHADA, 7, 4);
+  ctx.fillRect(x - 3, 86, 9, 7);
+  ctx.fillStyle = "#ffe9a0"; ctx.fillRect(x - 2, 87, 7, 5);
+  ctx.globalAlpha = 0.12 + (reduzMovimento ? 0 : Math.sin(estado.relogio * 3 + x) * 0.02);
+  ctx.fillStyle = "#ffd27a";
+  ctx.beginPath(); ctx.moveTo(x - 2, 92); ctx.lineTo(x - 22, CHAO_FACHADA + 8); ctx.lineTo(x + 26, CHAO_FACHADA + 8); ctx.lineTo(x + 5, 92); ctx.fill();
+  ctx.globalAlpha = 1;
 }
 function desenharObstaculo(o) {
   const x = Math.round(o.x), topo = GROUND - o.h;
   ctx.save();
-  if (o.queda > 0) { ctx.globalAlpha = 1 - o.queda * 0.7; ctx.translate(x + o.w / 2, GROUND); ctx.rotate(o.queda * 0.9); ctx.translate(-(x + o.w / 2), -GROUND); }
-  if (o.tipo === "cone") {
-    for (let i = 0; i < o.h - 2; i++) {
-      const w = 2 + Math.floor(i * 0.6);
-      ctx.fillStyle = (i >= 4 && i <= 6) ? "#fff6e6" : "#ff7a1a";
-      ctx.fillRect(x + Math.floor((o.w - w) / 2), topo + i, w, 1);
-    }
-    ctx.fillStyle = "#8a3a10"; ctx.fillRect(x - 1, GROUND - 2, o.w + 2, 2);
-  } else if (o.tipo === "caixote") {
-    ctx.fillStyle = "#5e3416"; ctx.fillRect(x, topo, o.w, o.h);
-    ctx.fillStyle = "#a8642f"; ctx.fillRect(x + 1, topo + 1, o.w - 2, o.h - 2);
-    ctx.fillStyle = "#5e3416";
-    for (let i = 1; i < o.w - 1; i++) { ctx.fillRect(x + i, topo + i, 1, 1); ctx.fillRect(x + o.w - 1 - i, topo + i, 1, 1); }
-  } else {
-    ctx.fillStyle = "#3a2a4a"; ctx.fillRect(x + 2, topo + 4, 2, o.h - 4); ctx.fillRect(x + o.w - 4, topo + 4, 2, o.h - 4);
-    for (let i = 0; i < o.w; i++) { ctx.fillStyle = Math.floor(i / 3) % 2 ? "#fff6e6" : "#e8433a"; ctx.fillRect(x + i, topo, 1, 5); }
+  if (o.queda > 0) {
+    ctx.globalAlpha = 1 - o.queda * 0.7;
+    ctx.translate(x + o.w / 2, GROUND); ctx.rotate(o.queda * (o.tipo === "carro" ? 0.15 : 0.9)); ctx.translate(-(x + o.w / 2), -GROUND);
   }
+  ctx.fillStyle = "rgba(10,5,20,.35)"; ctx.fillRect(x - 1, GROUND - 1, o.w + 2, 2);  // sombra
+  const r = (a, b, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x + a, topo + b, w, h); };
+  if (o.tipo === "hidrante") {
+    r(2, 0, 6, 2, "#8a1c1c"); r(1, 2, 8, 3, "#d8322a"); r(0, 6, 10, 3, "#d8322a"); r(2, 5, 6, 11, "#c02a22");
+    r(3, 6, 1, 8, "#ff7a6a"); r(0, 7, 1, 2, "#8a1c1c"); r(9, 7, 1, 2, "#8a1c1c"); r(1, 14, 8, 2, "#8a1c1c");
+  } else if (o.tipo === "lixeira") {
+    r(0, 0, 14, 3, "#6a7480"); r(5, -1, 4, 1, "#4a525c"); r(1, 3, 12, 15, "#58626e");
+    for (let i = 2; i < 13; i += 3) r(i, 4, 1, 13, "#3e4650");
+    r(1, 3, 12, 1, "#8a949e"); r(0, 16, 14, 2, "#3e4650");
+  } else if (o.tipo === "caixote") {
+    r(0, 0, 18, 13, "#6e3f1c");
+    for (let i = 1; i < 12; i += 4) r(1, i, 16, 3, "#b07a42");
+    r(2, -3, 4, 3, "#e9502e"); r(7, -4, 4, 4, "#f2b632"); r(12, -3, 4, 3, "#7ab83a");      // frutas
+  } else desenharCarroObst(x, o.cor);
   ctx.restore();
+}
+function desenharCarroObst(x, cor) {
+  const r = (a, b, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x + a, GROUND - b, w, h); };
+  r(2, 10, 30, 5, cor); r(0, 8, 34, 4, cor); r(9, 15, 16, 5, cor); r(10, 16, 14, 1, "#ffffff22");
+  r(11, 14, 6, 3, "#9fc6d6"); r(19, 14, 5, 3, "#9fc6d6"); r(0, 5, 34, 1, "#c9c9d2"); r(31, 10, 2, 2, "#ffe9a0");
+  r(4, 4, 7, 4, "#1a1420"); r(23, 4, 7, 4, "#1a1420"); r(6, 3, 3, 2, "#9a9aa6"); r(25, 3, 3, 2, "#9a9aa6");
 }
 const COR_NOTA = { 2: ["#8fb3cf", "#4c6f8c"], 5: ["#b08fd0", "#6a4b8c"], 10: ["#e46a5f", "#8c2f28"],
                    20: ["#f2c14e", "#9c7414"], 50: ["#e08a3c", "#8a4a12"], 100: ["#5f9ae0", "#244f8c"] };
 function desenharItem(i, t) {
   const x = Math.round(i.x);
   if (i.tipo === "moeda") {
-    const giro = [6, 4, 2, 4][Math.floor(t * 8 + i.fase * 4) % 4];
-    const ox = x + (6 - giro) / 2, y = Math.round(i.y);
-    ctx.fillStyle = "#3b200c"; ctx.fillRect(ox - 1, y - 1, giro + 2, 8);
-    ctx.fillStyle = "#9c7414"; ctx.fillRect(ox, y, giro, 6);
-    ctx.fillStyle = "#ffd23f"; ctx.fillRect(ox + (giro > 2 ? 1 : 0), y + 1, Math.max(1, giro - 2), 4);
-    if (giro === 6) { ctx.fillStyle = "#fff6e6"; ctx.fillRect(ox + 2, y + 1, 1, 2); }
+    const giro = [7, 5, 3, 5][Math.floor(t * 8 + i.fase * 4) % 4], ox = x + (7 - giro) / 2, y = Math.round(i.y);
+    ctx.fillStyle = "#3b200c"; ctx.fillRect(ox - 1, y - 1, giro + 2, 9);
+    ctx.fillStyle = "#c99a1a"; ctx.fillRect(ox, y, giro, 7);
+    ctx.fillStyle = "#ffd23f"; ctx.fillRect(ox + 1, y + 1, Math.max(1, giro - 2), 5);
+    if (giro === 7) { ctx.fillStyle = "#fff6e6"; ctx.fillRect(ox + 2, y + 1, 1, 2); }
   } else {
-    const y = Math.round(i.y + Math.sin(t * 4 + i.fase) * 1.5);
-    const [claro, escuro] = COR_NOTA[i.valor];
+    const y = Math.round(i.y + Math.sin(t * 4 + i.fase) * 1.5), [claro, escuro] = COR_NOTA[i.valor];
     if (i.valor >= 50 && Math.floor(t * 6) % 2 === 0) { ctx.fillStyle = "#ffffff"; ctx.fillRect(x - 1, y - 1, 14, 9); }
     ctx.fillStyle = escuro; ctx.fillRect(x, y, 12, 7);
     ctx.fillStyle = claro; ctx.fillRect(x + 1, y + 1, 10, 5);
     ctx.fillStyle = escuro; ctx.fillRect(x + 5, y + 2, 2, 3);
   }
 }
+
+function desenharPoster() {
+  const e = estado;
+  desenharCenario(e.scroll);
+  ctx.fillStyle = "rgba(16,10,30,.35)"; ctx.fillRect(0, 0, W, H);
+  // título em neon
+  ctx.fillStyle = "#1a1024"; ctx.fillRect(66, 10, 188, 44); ctx.fillStyle = "#3a2a4a"; ctx.fillRect(68, 12, 184, 40);
+  const pisca = reduzMovimento || Math.floor(e.relogio * 3) % 9 !== 0;
+  neon(ctx, "MANO MIAU", 74, 16, 4, pisca ? "#ff5fa8" : "#7a3a5a", "#ffb0d6");
+  neon(ctx, "FOGE DO DON LARAPIO", 85, 42, 1, "#6ff3ff", "#b8faff");
+  // personagens grandes
+  ctx.save(); ctx.imageSmoothingEnabled = false;
+  const sobe = reduzMovimento ? 0 : Math.round(Math.sin(e.relogio * 3) * 2);
+  ctx.drawImage(IMG.larapio[Math.floor(e.relogio * 4) % 2], 22, 66 + sobe, LAR_W * 3, LAR_H * 3);
+  ctx.drawImage(IMG.tigreCorre[Math.floor(e.relogio * 6) % 2], 220, 84 - sobe, TIGRE_W * 3, TIGRE_H * 3);
+  ctx.restore();
+  // notas voando atrás do tigre
+  ctx.save(); ctx.scale(2, 2);
+  [[50, 2, 0], [100, 9, 1.3], [20, 18, 2.4], [50, 27, 3.1]].forEach(([v, k, f], idx) => {
+    desenharItem({ tipo: "nota", valor: v, x: 92 + (idx % 2) * 9 + Math.sin(e.relogio * 2 + f) * 3, y: 32 + k * 0.8, fase: f }, e.relogio);
+  });
+  ctx.restore();
+}
+
 function desenhar() {
   const e = estado;
+  if (e.modo === "inicio") { desenharPoster(); return; }
   ctx.save();
-  if (e.tremor > 0) ctx.translate(Math.round((Math.random() - 0.5) * 4), Math.round((Math.random() - 0.5) * 3));
+  if (e.tremor > 0) ctx.translate(Math.round(rnd(-2, 2)), Math.round(rnd(-1.5, 1.5)));
   desenharCenario(e.scroll);
-  for (const i of e.itens) desenharItem(i, e.t + (e.tempoCaptura || 0));
+  for (const i of e.itens) desenharItem(i, e.t + e.tempoCaptura);
   for (const o of e.obstaculos) desenharObstaculo(o);
-
-  const passo = Math.floor(e.scroll / 14) % 2;
-  ctx.drawImage(IMG.larapio[e.modo === "capturado" ? 0 : passo], Math.round(e.larapio.x), GROUND - 24);
-
+  const passo = Math.floor(e.scroll / 16) % 2;
+  ctx.fillStyle = "rgba(10,5,20,.35)";
+  ctx.fillRect(Math.round(e.larapio.x) + 3, GROUND - 1, LAR_W - 6, 2);
+  ctx.drawImage(IMG.larapio[e.modo === "capturado" || e.modo === "contagem" ? 0 : passo], Math.round(e.larapio.x), GROUND - LAR_H + 1);
   const j = e.jogador;
+  ctx.fillRect(Math.round(j.x) + 6, GROUND - 1, 14, 2);
   const pisca = j.invencivel > 0 && Math.floor(j.invencivel * 12) % 2 === 0;
-  if (!pisca) ctx.drawImage(IMG.tigre[j.noChao ? passo : 0], Math.round(j.x), Math.round(j.y) - 20);
-
+  const sprite = !j.noChao ? IMG.tigrePulo : (e.modo === "contagem" ? IMG.tigreCorre[0] : IMG.tigreCorre[passo]);
+  if (!pisca) ctx.drawImage(sprite, Math.round(j.x), Math.round(j.y) - TIGRE_H);
   ctx.fillStyle = "#ffd23f";
   for (const p of e.particulas) ctx.fillRect(Math.round(p.x), Math.round(p.y), 3, 3);
   ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = "center";
@@ -493,11 +644,10 @@ function desenhar() {
 }
 
 /* ===== HUD e telas ===== */
-const $ = id => document.getElementById(id);
 const spansMedidor = [...$("meter").children];
 let ultimoHud = "";
 function atualizarHud() {
-  const txt = brl.format(estado.dinheiro) + "|" + estado.tropecos;
+  const txt = estado.dinheiro + "|" + estado.tropecos + "|" + recorde;
   if (txt === ultimoHud) return;
   ultimoHud = txt;
   $("money").textContent = brl.format(estado.dinheiro);
@@ -506,48 +656,46 @@ function atualizarHud() {
 }
 function mostrarTela(id) {
   ["startScreen", "pauseScreen", "overScreen"].forEach(t => $(t).classList.toggle("hidden", t !== id));
+  document.querySelector(".hud").style.visibility = id === "startScreen" ? "hidden" : "visible";
 }
-function comecar() { novoJogo(); ultimoHud = ""; mostrarTela(null); }
-function pausar() { if (estado && estado.modo === "jogando") { estado.modo = "pausado"; mostrarTela("pauseScreen"); $("resumeBtn").focus(); } }
-function continuar() { if (estado && estado.modo === "pausado") { estado.modo = "jogando"; mostrarTela(null); } }
+function pausar() { if (estado.modo === "jogando") { estado.modo = "pausado"; mostrarTela("pauseScreen"); $("resumeBtn").focus(); } }
+function continuar() { if (estado.modo === "pausado") { estado.modo = "jogando"; mostrarTela(null); } }
 
-$("startBtn").addEventListener("click", comecar);
-$("againBtn").addEventListener("click", comecar);
+$("startBtn").addEventListener("click", iniciarContagem);
+$("againBtn").addEventListener("click", iniciarContagem);
 $("resumeBtn").addEventListener("click", continuar);
 $("startBest").textContent = recorde > 0 ? "Seu recorde: " + brl.format(recorde) : "";
 
-/* ===== Teclado ===== */
-const MAPA = { ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right",
-               ArrowUp: "jump", KeyW: "jump", Space: "jump" };
+const MAPA = { ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right", ArrowUp: "jump", KeyW: "jump", Space: "jump" };
 window.addEventListener("keydown", ev => {
-  const jogando = estado && estado.modo === "jogando";
-  if (ev.code === "KeyP" || ev.code === "Escape") { jogando ? pausar() : continuar(); return; }
-  if (MAPA[ev.code] && jogando) { ev.preventDefault(); setTecla(MAPA[ev.code], true); }
+  if (ev.code === "KeyP" || ev.code === "Escape") { estado.modo === "jogando" ? pausar() : continuar(); return; }
+  const ativo = estado.modo === "jogando" || estado.modo === "contagem";
+  if (MAPA[ev.code] && ativo) { ev.preventDefault(); setTecla(MAPA[ev.code], true); }
 });
 window.addEventListener("keyup", ev => { if (MAPA[ev.code]) setTecla(MAPA[ev.code], false); });
 window.addEventListener("blur", () => { input.left = input.right = input.jump = false; });
 document.addEventListener("visibilitychange", () => { if (document.hidden) pausar(); });
 
-/* ===== Toque ===== */
 document.querySelectorAll(".pad").forEach(btn => {
   const nome = btn.dataset.key;
   const on = ev => { ev.preventDefault(); btn.setPointerCapture?.(ev.pointerId); btn.classList.add("pressed"); setTecla(nome, true); };
   const off = () => { btn.classList.remove("pressed"); setTecla(nome, false); };
   btn.addEventListener("pointerdown", on);
-  btn.addEventListener("pointerup", off);
-  btn.addEventListener("pointercancel", off);
-  btn.addEventListener("lostpointercapture", off);
+  ["pointerup", "pointercancel", "lostpointercapture"].forEach(t => btn.addEventListener(t, off));
   btn.addEventListener("contextmenu", ev => ev.preventDefault());
 });
 
 /* ===== Laço principal ===== */
-novoJogo(); estado.modo = "inicio";
+novoJogo("inicio");
+mostrarTela("startScreen");
 let anterior = performance.now();
 function laco(agora) {
-  const dt = Math.min(0.05, (agora - anterior) / 1000);
+  const dt = Math.max(0, Math.min(0.05, (agora - anterior) / 1000)); // nunca negativo: o 1º quadro pode vir "antes" do relógio
   anterior = agora;
-  if (estado.modo === "jogando" || estado.modo === "capturado") atualizar(dt);
-  else if (estado.modo === "inicio") estado.scroll += 30 * dt; // cenário andando na tela inicial
+  const m = estado.modo;
+  if (m === "jogando" || m === "capturado" || m === "contagem") atualizar(dt);
+  else if (m === "inicio") { estado.relogio += dt; estado.scroll += 20 * dt; }
+  if (m === "contagem") input.jumpPressionado = false;   // ninguém pula antes da largada
   desenhar();
   atualizarHud();
   requestAnimationFrame(laco);
