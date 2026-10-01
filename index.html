@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mano Miau — Foge do Larápio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  /* ===== Tokens de cor (tema claro / escuro) ===== */
+  :root {
+    --page: #e7e1f3; --text: #2a1d45; --muted: #5d4f7a;
+    --money: #3fd47a; --danger: #e8433a; --ink: #fff6e6; --panel: rgba(24,14,44,.82);
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --page: #120b22; --text: #efe7ff; --muted: #a596c4; }
+  }
+  :root[data-theme="dark"] { --page: #120b22; --text: #efe7ff; --muted: #a596c4; }
+  *, *::before, *::after { box-sizing: inherit; }
+  html { height: 100%; scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body {
+    margin: 0; min-height: 100%; background: var(--page); color: var(--text);
+    font-family: "Press Start 2P", ui-monospace, "Courier New", monospace;
+    display: flex; justify-content: center;
+  }
+  .wrap { width: 100%; max-width: 980px; padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+
+  /* ===== Palco do jogo ===== */
+  .stage { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 6px; overflow: hidden;
+           box-shadow: 0 0 0 4px #2a1d45, 0 10px 30px rgba(20,8,40,.35); background: #1e1436; }
+  canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
+
+  .hud { position: absolute; inset: 0; pointer-events: none; display: flex; justify-content: space-between;
+         align-items: flex-start; padding: 2.2% 2.6%; color: var(--ink); text-shadow: 2px 2px 0 #1a0f2e; }
+  #money { font-size: clamp(12px, 2.6vw, 26px); color: var(--money); }
+  .small { font-size: clamp(7px, 1.2vw, 12px); margin-top: .6em; opacity: .9; }
+  .hud-right { text-align: right; }
+  .meter { display: flex; gap: 4px; justify-content: flex-end; margin-top: .5em; }
+  .meter span { width: clamp(8px, 1.6vw, 16px); aspect-ratio: 1; background: rgba(255,255,255,.18);
+                box-shadow: inset 0 0 0 2px #1a0f2e; }
+  .meter span.on { background: var(--danger); }
+
+  .screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
+            justify-content: center; gap: 1.2em; text-align: center; padding: 4%;
+            background: var(--panel); color: var(--ink); }
+  .screen.hidden { display: none; }
+  .screen h1 { margin: 0; font-size: clamp(20px, 5.5vw, 52px); color: #ffd23f; text-shadow: 4px 4px 0 #b2456b; line-height: 1.2; }
+  .screen h2 { margin: 0; font-size: clamp(14px, 3.2vw, 30px); color: #ffd23f; text-shadow: 3px 3px 0 #b2456b; }
+  .screen p { margin: 0; font-size: clamp(8px, 1.5vw, 14px); line-height: 1.8; max-width: 38em; }
+  .screen strong { color: var(--money); font-weight: normal; }
+  .btn { font: inherit; font-size: clamp(10px, 1.8vw, 16px); padding: .9em 1.6em; border: 0; cursor: pointer;
+         background: #ffd23f; color: #2a1d45; box-shadow: 4px 4px 0 #b2456b; }
+  .btn:hover { background: #ffe07a; }
+  .btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #b2456b; }
+  .btn:focus-visible, .pad:focus-visible { outline: 3px solid #ffffff; outline-offset: 3px; }
+
+  /* ===== Controles de toque (só aparecem em telas de toque) ===== */
+  .touch { display: none; justify-content: space-between; gap: 12px; user-select: none; -webkit-user-select: none; }
+  @media (hover: none) and (pointer: coarse) { .touch { display: flex; } .help { display: none; } }
+  .touch .group { display: flex; gap: 12px; }
+  .pad { font: inherit; font-size: 18px; width: 72px; height: 72px; border: 0; border-radius: 50%;
+         background: #2a1d45; color: #ffd23f; box-shadow: 0 4px 0 #120b22; touch-action: none; }
+  .pad.jump { width: 120px; border-radius: 36px; font-size: 13px; background: #b2456b; color: #fff6e6; }
+  .pad.pressed { transform: translateY(3px); box-shadow: 0 1px 0 #120b22; }
+  .help { margin: 0; font-size: 10px; line-height: 1.9; color: var(--muted); text-align: center; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="stage" id="stage">
+    <canvas id="game" width="320" height="180" aria-label="Jogo Mano Miau: o tigre corre pela cidade fugindo do Larápio"></canvas>
+
+    <div class="hud" aria-live="off">
+      <div>
+        <div id="money">R$ 0,00</div>
+        <div class="small" id="bestHud">Recorde R$ 0,00</div>
+      </div>
+      <div class="hud-right">
+        <div class="small">Larápio</div>
+        <div class="meter" id="meter"><span></span><span></span><span></span><span></span><span></span></div>
+      </div>
+    </div>
+
+    <div class="screen" id="startScreen">
+      <h1>Mano Miau</h1>
+      <p>Corre pela cidade, junta toda grana que puder e não deixa o Larápio te pegar. Cada tropeço deixa ele mais perto e leva a grana dos últimos 30 segundos.</p>
+      <button class="btn" id="startBtn">Jogar</button>
+      <p id="startBest"></p>
+    </div>
+
+    <div class="screen hidden" id="pauseScreen">
+      <h2>Pausado</h2>
+      <button class="btn" id="resumeBtn">Continuar</button>
+    </div>
+
+    <div class="screen hidden" id="overScreen">
+      <h2>O Larápio te pegou!</h2>
+      <p>Você juntou <strong id="finalMoney">R$ 0,00</strong></p>
+      <p id="recordMsg"></p>
+      <button class="btn" id="againBtn">Jogar de novo</button>
+    </div>
+  </div>
+
+  <div class="touch" id="touch">
+    <div class="group">
+      <button class="pad" data-key="left" aria-label="Andar para trás">◀</button>
+      <button class="pad" data-key="right" aria-label="Andar para frente">▶</button>
+    </div>
+    <button class="pad jump" data-key="jump" aria-label="Pular">Pular</button>
+  </div>
+
+  <p class="help">Setas ← → para andar, ↑ ou espaço para pular, P para pausar</p>
+</main>
+<script>
+const SPRITES = {"pal": {"k": "#2b1608", "o": "#f39a2b", "d": "#c9701a", "s": "#3b200c", "w": "#fff3dc", "e": "#111111", "n": "#ff7f9c", "b": "#2f6fdb", "B": "#1f4aa0", "y": "#ffd23f", "Y": "#d9a91e", "K": "#1b1b22", "h": "#505060", "f": "#e8b48a", "F": "#c48c64", "g": "#0a0a0e", "m": "#787880", "S": "#22222b", "T": "#3a3a48", "W": "#f5f5f5", "r": "#aa2828", "G": "#8c8c96"}, "tiger": [["......kkkkkkk.....", "....kkbbbbbbbk....", "kkkkbbbbbbbbbbk...", "kBBBBkbbbbbbbbbk..", ".kkkkkkkkkkkkkkk..", "...kososooososok..", "...koooooooooooko.", "...kooooooookeook.", "...kddoooowwwwwnk.", "....kdooowwwwwwk..", ".....kkkwwwwkkk...", "....kyyyyyyyyyk...", "...koyyyyyyyyyok..", "..kooyyyyyyyyyook.", "..kkoYyyyyyyyYokk.", "....kwwwwwwwwwk...", "....kowwwwwwwok...", "....kooookooook...", "...kook....kook...", "...kkk......kkk..."], ["......kkkkkkk.....", "....kkbbbbbbbk....", "kkkkbbbbbbbbbbk...", "kBBBBkbbbbbbbbbk..", ".kkkkkkkkkkkkkkk..", "...kososooososok..", "...koooooooooooko.", "...kooooooookeook.", "...kddoooowwwwwnk.", "....kdooowwwwwwk..", ".....kkkwwwwkkk...", "....kyyyyyyyyyk...", "...koyyyyyyyyyok..", "..kooyyyyyyyyyook.", "..kkoYyyyyyyyYokk.", "....kwwwwwwwwwk...", "....kowwwwwwwok...", "....kookkkkook....", ".....kook.kook....", ".....kkk..kkk....."]], "lar": [[".....kkkkkk.....", "....kKKKKKKk....", "....kKKKKKKk....", "....khhhhhhk....", ".kkkKKKKKKKKkkk.", "..kKKKKKKKKKKKk.", "...kGfffffffk...", "...kggggfgggk...", "...kgggkfgggk...", "...kffffffffk...", "...kfmmmmmmfk...", "....kffrrfFk....", ".....kkkkkk.....", "...kSSSWWSSSk...", "..kSSSSWrSSSSk..", "..kSTSSWrSSTSk..", ".kfkSSSWrSSSkfk.", ".kfkSSSWWSSSkfk.", "..kkSSSSSSSSkk..", "...kSSSSSSSSk...", "...kSSSkkSSSk...", "...kSSSk.kSSSk..", "..kSSSk...kSSk..", "..kKKKk...kKKKk."], [".....kkkkkk.....", "....kKKKKKKk....", "....kKKKKKKk....", "....khhhhhhk....", ".kkkKKKKKKKKkkk.", "..kKKKKKKKKKKKk.", "...kGfffffffk...", "...kggggfgggk...", "...kgggkfgggk...", "...kffffffffk...", "...kfmmmmmmfk...", "....kffrrfFk....", ".....kkkkkk.....", "...kSSSWWSSSk...", "..kSSSSWrSSSSk..", "..kSTSSWrSSTSk..", ".kfkSSSWrSSSkfk.", ".kfkSSSWWSSSkfk.", "..kkSSSSSSSSkk..", "...kSSSSSSSSk...", "...kSSSSSSSk....", "....kSSSSSk.....", "....kSSkSSk.....", "...kKKKkKKKk...."]]};
+"use strict";
+
+/* =========================================================
+   CONFIG — números de balanceamento do jogo.
+   Mexa aqui para deixar o jogo mais fácil ou mais difícil.
+   ========================================================= */
+const CONFIG = {
+  velocidadeInicial: 80,          // px por segundo no começo
+  aceleracao: 2.2,                // quanto a velocidade cresce a cada segundo (sem limite)
+  gravidade: 900,
+  forcaPulo: 300,
+  velocidadeAndar: 120,           // andar para frente/trás dentro da tela
+  tropecosParaCaptura: 5,         // spec: 5 tropeços e o Larápio pega
+  segundosSemTropecoParaRecuperar: 6,
+  segundosPorRecuperacao: 7,      // depois disso, a cada 7 s o Larápio fica 1 passo para trás
+  janelaPenalidade: 30,           // spec: perde o que ganhou nos últimos 30 s
+  invencivelAposTropeco: 1.2,
+  intervaloObstaculoInicial: 1.6,
+  intervaloObstaculoMinimo: 0.55,
+  chanceNota: 0.4,
+  // [valor, peso] — quanto maior o peso, mais comum
+  notas: [[2, 35], [5, 25], [10, 18], [20, 12], [50, 7], [100, 3]],
+};
+
+const W = 320, H = 180, GROUND = 160;
+const CHAVE_RECORDE = "mano-miau-recorde";
+const reduzMovimento = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+
+/* ===== Sprites: transforma o desenho em texto em imagem ===== */
+function criarSprite(linhas) {
+  const c = document.createElement("canvas");
+  c.width = linhas[0].length; c.height = linhas.length;
+  const g = c.getContext("2d");
+  linhas.forEach((linha, y) => [...linha].forEach((ch, x) => {
+    if (ch !== ".") { g.fillStyle = SPRITES.pal[ch]; g.fillRect(x, y, 1, 1); }
+  }));
+  return c;
+}
+const IMG = { tigre: SPRITES.tiger.map(criarSprite), larapio: SPRITES.lar.map(criarSprite) };
+
+/* ===== Recorde salvo no navegador ===== */
+function lerRecorde() {
+  try { return Number(localStorage.getItem(CHAVE_RECORDE)) || 0; } catch { return 0; }
+}
+function salvarRecorde(v) {
+  try { localStorage.setItem(CHAVE_RECORDE, String(v)); } catch { /* sem armazenamento: segue o jogo */ }
+}
+
+/* ===== Cenário (prédios gerados uma vez) ===== */
+function gerarPredios(total, wMin, wMax, hMin, hMax) {
+  const lista = []; let x = 0;
+  while (x < total) {
+    const w = wMin + Math.floor(Math.random() * (wMax - wMin));
+    const h = hMin + Math.floor(Math.random() * (hMax - hMin));
+    const janelas = [];
+    for (let jy = 6; jy < h - 4; jy += 6) for (let jx = 3; jx < w - 3; jx += 5)
+      if (Math.random() < 0.3) janelas.push([jx, jy]);
+    lista.push({ x, w, h, janelas }); x += w + 2;
+  }
+  return { lista, total: x };
+}
+const LONGE = gerarPredios(480, 18, 34, 34, 80);
+const PERTO = gerarPredios(560, 24, 46, 18, 50);
+
+/* ===== Entrada (teclado + toque) ===== */
+const input = { left: false, right: false, jump: false, jumpPressionado: false };
+function setTecla(nome, ativo) {
+  if (nome === "jump") {
+    if (ativo && !input.jump) input.jumpPressionado = true;
+  }
+  input[nome] = ativo;
+}
+
+/* ===== Estado do jogo ===== */
+let estado;
+let recorde = lerRecorde();
+
+function novoJogo() {
+  estado = {
+    modo: "jogando", t: 0, velocidade: CONFIG.velocidadeInicial, scroll: 0,
+    dinheiro: 0, historico: [], tropecos: 0, semTropeco: 0, relogioRecuperacao: 0,
+    jogador: { x: 90, y: GROUND, vy: 0, noChao: true, invencivel: 0 },
+    larapio: { x: -10 }, tempoCaptura: 0,
+    obstaculos: [], itens: [], particulas: [], textos: [],
+    proxObstaculo: 1.2, proxMoedas: 0.6, tremor: 0,
+  };
+}
+
+/* ===== Geração de obstáculos e dinheiro ===== */
+const TIPOS = {
+  cone:     { w: 9,  h: 12 },
+  caixote:  { w: 14, h: 14 },
+  cavalete: { w: 20, h: 12 },
+};
+function sortearNota() {
+  const total = CONFIG.notas.reduce((s, n) => s + n[1], 0);
+  let r = Math.random() * total;
+  for (const [valor, peso] of CONFIG.notas) { if ((r -= peso) < 0) return valor; }
+  return 2;
+}
+function criarObstaculo(x) {
+  const nomes = Object.keys(TIPOS);
+  const tipo = nomes[Math.floor(Math.random() * nomes.length)];
+  const o = { tipo, x, w: TIPOS[tipo].w, h: TIPOS[tipo].h, atingido: false, queda: 0 };
+  estado.obstaculos.push(o);
+  // Risco x recompensa: quanto maior a nota, mais perigosa a posição
+  if (Math.random() < CONFIG.chanceNota) {
+    const valor = sortearNota();
+    let nx = o.x + o.w / 2 - 6, ny;
+    if (valor >= 50) ny = GROUND - 62;            // só com pulo cheio, bem em cima do obstáculo
+    else if (valor === 20) { nx = o.x - 16; ny = GROUND - 12; } // colada na frente do obstáculo
+    else ny = GROUND - o.h - 18;                  // pulo normal por cima
+    estado.itens.push({ tipo: "nota", valor, x: nx, y: ny, w: 12, h: 7, fase: Math.random() * 6 });
+  }
+  return o;
+}
+function gerarObstaculos() {
+  const o = criarObstaculo(W + 10);
+  const t = estado.t;
+  if (t > 35 && Math.random() < Math.min(0.35, (t - 35) / 150)) criarObstaculo(o.x + o.w + 16);
+  const base = Math.max(CONFIG.intervaloObstaculoMinimo, CONFIG.intervaloObstaculoInicial - t * 0.012);
+  estado.proxObstaculo = Math.max(base * (0.75 + Math.random() * 0.7), 70 / estado.velocidade);
+}
+function gerarMoedas() {
+  const n = 4 + Math.floor(Math.random() * 3);
+  const arco = Math.random() < 0.45;
+  for (let i = 0; i < n; i++) {
+    const p = i / (n - 1);
+    const y = arco ? GROUND - 12 - Math.sin(p * Math.PI) * 30 : GROUND - 12;
+    estado.itens.push({ tipo: "moeda", valor: 1, x: W + 10 + i * 12, y, w: 6, h: 6, fase: i * 0.4 });
+  }
+  estado.proxMoedas = 1.4 + Math.random() * 1.2;
+}
+
+/* ===== Regras ===== */
+function caixaJogador() {
+  const j = estado.jogador;
+  return { x: j.x + 4, y: j.y - 18, w: 10, h: 17 };
+}
+function colide(a, b) {
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+function textoFlutuante(txt, x, y, cor) { estado.textos.push({ txt, x, y, cor, vida: 0.9 }); }
+
+function coletar(item) {
+  item.coletado = true;
+  estado.dinheiro += item.valor;
+  estado.historico.push({ t: estado.t, valor: item.valor });
+  if (item.tipo === "nota") textoFlutuante("+R$" + item.valor, item.x + 6, item.y - 2, "#ffd23f");
+}
+
+function tropecar(o) {
+  const e = estado;
+  o.atingido = true;
+  e.tropecos++;
+  e.semTropeco = 0; e.relogioRecuperacao = 0;
+  // Penalidade: tudo o que entrou nos últimos 30 s
+  const perda = e.historico.filter(h => h.t >= e.t - CONFIG.janelaPenalidade).reduce((s, h) => s + h.valor, 0);
+  e.historico = []; // o que já foi cobrado não é cobrado de novo
+  e.dinheiro = Math.max(0, e.dinheiro - perda);
+  const j = e.jogador;
+  if (perda > 0) {
+    textoFlutuante("-R$" + perda, j.x + 9, j.y - 26, "#ff6b5e");
+    for (let i = 0; i < Math.min(10, 3 + perda / 10); i++)
+      e.particulas.push({ x: j.x + 9, y: j.y - 12, vx: -60 + Math.random() * 120, vy: -120 - Math.random() * 80, vida: 0.9 });
+  } else textoFlutuante("Ai!", j.x + 9, j.y - 26, "#ff6b5e");
+  j.invencivel = CONFIG.invencivelAposTropeco;
+  if (!reduzMovimento) e.tremor = 0.25;
+  if (e.tropecos >= CONFIG.tropecosParaCaptura) capturar();
+}
+
+function capturar() {
+  estado.modo = "capturado";
+  estado.tempoCaptura = 0;
+  textoFlutuante("Peguei!", estado.jogador.x + 9, estado.jogador.y - 30, "#ffffff");
+}
+
+function fimDeJogo() {
+  estado.modo = "fim";
+  const valor = estado.dinheiro;
+  const novo = valor > recorde;
+  if (novo) { recorde = valor; salvarRecorde(recorde); }
+  $("finalMoney").textContent = brl.format(valor);
+  $("recordMsg").textContent = novo ? "Novo recorde!" : "Recorde: " + brl.format(recorde);
+  mostrarTela("overScreen");
+  $("againBtn").focus();
+}
+
+/* ===== Atualização por quadro ===== */
+function atualizar(dt) {
+  const e = estado, j = e.jogador, L = e.larapio;
+
+  if (e.modo === "capturado") {
+    e.tempoCaptura += dt;
+    L.x += (j.x - 8 - L.x) * Math.min(1, dt * 6);
+    atualizarEfeitos(dt);
+    if (e.tempoCaptura > 1.4) fimDeJogo();
+    return;
+  }
+
+  e.t += dt;
+  e.velocidade = CONFIG.velocidadeInicial + CONFIG.aceleracao * e.t;
+  const dx = e.velocidade * dt;
+  e.scroll += dx;
+
+  // Movimento do tigre
+  const dir = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+  j.x = Math.min(W - 60, Math.max(6, j.x + dir * CONFIG.velocidadeAndar * dt));
+  if (input.jumpPressionado && j.noChao) { j.vy = -CONFIG.forcaPulo; j.noChao = false; }
+  input.jumpPressionado = false;
+  if (!input.jump && j.vy < -120) j.vy = -120;   // soltar cedo = pulo mais baixo
+  j.vy += CONFIG.gravidade * dt;
+  j.y += j.vy * dt;
+  if (j.y >= GROUND) { j.y = GROUND; j.vy = 0; j.noChao = true; }
+  j.invencivel = Math.max(0, j.invencivel - dt);
+
+  // Geração
+  if ((e.proxObstaculo -= dt) <= 0) gerarObstaculos();
+  if ((e.proxMoedas -= dt) <= 0) gerarMoedas();
+
+  // Mundo andando
+  for (const o of e.obstaculos) o.x -= dx;
+  for (const i of e.itens) i.x -= dx;
+  e.obstaculos = e.obstaculos.filter(o => o.x > -40);
+  e.itens = e.itens.filter(i => i.x > -20 && !i.coletado);
+
+  // Colisões
+  const cj = caixaJogador();
+  for (const i of e.itens) if (colide(cj, i)) coletar(i);
+  if (j.invencivel <= 0) {
+    for (const o of e.obstaculos) {
+      if (!o.atingido && colide(cj, { x: o.x + 1, y: GROUND - o.h + 2, w: o.w - 2, h: o.h - 2 })) { tropecar(o); break; }
+    }
+  }
+  if (e.modo !== "jogando") return;
+
+  // Recuperação: sem tropeçar por um tempo, o Larápio fica para trás
+  e.semTropeco += dt;
+  if (e.tropecos > 0 && e.semTropeco >= CONFIG.segundosSemTropecoParaRecuperar) {
+    e.relogioRecuperacao += dt;
+    if (e.relogioRecuperacao >= CONFIG.segundosPorRecuperacao) {
+      e.tropecos--; e.relogioRecuperacao = 0;
+      textoFlutuante("Despistou!", j.x + 9, j.y - 26, "#7dffb0");
+    }
+  }
+
+  // Larápio se aproxima conforme os tropeços
+  const alvo = -10 + e.tropecos * 12;
+  L.x += (alvo - L.x) * Math.min(1, dt * 3);
+  if (j.x + 4 < L.x + 13) capturar();   // recuar demais = cair nas mãos dele
+
+  atualizarEfeitos(dt);
+}
+function atualizarEfeitos(dt) {
+  const e = estado;
+  for (const p of e.particulas) { p.vy += 500 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vida -= dt; }
+  e.particulas = e.particulas.filter(p => p.vida > 0);
+  for (const t of e.textos) { t.y -= 18 * dt; t.vida -= dt; }
+  e.textos = e.textos.filter(t => t.vida > 0);
+  for (const o of e.obstaculos) if (o.atingido) o.queda = Math.min(1, o.queda + dt * 3);
+  e.tremor = Math.max(0, e.tremor - dt);
+}
+
+/* ===== Desenho ===== */
+const cv = document.getElementById("game");
+const ctx = cv.getContext("2d");
+ctx.imageSmoothingEnabled = false;
+
+const CEU = ["#1e1436", "#3b2160", "#6b2f6e", "#b2456b", "#ec7a4f", "#ffb35c"];
+function desenharCenario(scroll) {
+  const faixa = 18;
+  CEU.forEach((c, i) => { ctx.fillStyle = c; ctx.fillRect(-4, i * faixa - (i ? 0 : 4), W + 8, faixa + 1 + (i ? 0 : 4)); });
+  ctx.fillStyle = CEU[5]; ctx.fillRect(-4, CEU.length * faixa, W + 8, GROUND);
+  // Sol retrô com faixas
+  ctx.fillStyle = "#ffd38a";
+  for (let y = -20; y <= 20; y++) {
+    if (y > 4 && y % 4 === 0) continue;
+    const meia = Math.floor(Math.sqrt(400 - y * y));
+    ctx.fillRect(240 - meia, 96 + y, meia * 2, 1);
+  }
+  desenharPredios(LONGE, scroll * 0.2, "#2f1d4f", "#f59a7a", 0.35);
+  desenharPredios(PERTO, scroll * 0.5, "#1a1030", "#f59a7a", 0.5);
+  // Calçada e rua
+  ctx.fillStyle = "#5a4672"; ctx.fillRect(-4, GROUND, W + 8, 6);
+  ctx.fillStyle = "#3d2f52";
+  const off = scroll % 16;
+  for (let x = -off; x < W; x += 16) ctx.fillRect(Math.round(x), GROUND, 1, 6);
+  ctx.fillStyle = "#2a2233"; ctx.fillRect(-4, GROUND + 6, W + 8, H - GROUND + 2);
+  ctx.fillStyle = "#c9b8e0";
+  const off2 = scroll % 40;
+  for (let x = -off2; x < W; x += 40) ctx.fillRect(Math.round(x), GROUND + 12, 18, 2);
+}
+function desenharPredios(camada, desloc, cor, corJanela, alpha) {
+  const base = desloc % camada.total;
+  for (let rep = 0; rep < 2; rep++) {
+    for (const p of camada.lista) {
+      const x = Math.round(p.x - base + rep * camada.total);
+      if (x > W || x + p.w < 0) continue;
+      ctx.fillStyle = cor; ctx.fillRect(x, GROUND - p.h, p.w, p.h);
+      ctx.globalAlpha = alpha; ctx.fillStyle = corJanela;
+      for (const [jx, jy] of p.janelas) ctx.fillRect(x + jx, GROUND - p.h + jy, 1, 2);
+      ctx.globalAlpha = 1;
+    }
+  }
+}
+function desenharObstaculo(o) {
+  const x = Math.round(o.x), topo = GROUND - o.h;
+  ctx.save();
+  if (o.queda > 0) { ctx.globalAlpha = 1 - o.queda * 0.7; ctx.translate(x + o.w / 2, GROUND); ctx.rotate(o.queda * 0.9); ctx.translate(-(x + o.w / 2), -GROUND); }
+  if (o.tipo === "cone") {
+    for (let i = 0; i < o.h - 2; i++) {
+      const w = 2 + Math.floor(i * 0.6);
+      ctx.fillStyle = (i >= 4 && i <= 6) ? "#fff6e6" : "#ff7a1a";
+      ctx.fillRect(x + Math.floor((o.w - w) / 2), topo + i, w, 1);
+    }
+    ctx.fillStyle = "#8a3a10"; ctx.fillRect(x - 1, GROUND - 2, o.w + 2, 2);
+  } else if (o.tipo === "caixote") {
+    ctx.fillStyle = "#5e3416"; ctx.fillRect(x, topo, o.w, o.h);
+    ctx.fillStyle = "#a8642f"; ctx.fillRect(x + 1, topo + 1, o.w - 2, o.h - 2);
+    ctx.fillStyle = "#5e3416";
+    for (let i = 1; i < o.w - 1; i++) { ctx.fillRect(x + i, topo + i, 1, 1); ctx.fillRect(x + o.w - 1 - i, topo + i, 1, 1); }
+  } else {
+    ctx.fillStyle = "#3a2a4a"; ctx.fillRect(x + 2, topo + 4, 2, o.h - 4); ctx.fillRect(x + o.w - 4, topo + 4, 2, o.h - 4);
+    for (let i = 0; i < o.w; i++) { ctx.fillStyle = Math.floor(i / 3) % 2 ? "#fff6e6" : "#e8433a"; ctx.fillRect(x + i, topo, 1, 5); }
+  }
+  ctx.restore();
+}
+const COR_NOTA = { 2: ["#8fb3cf", "#4c6f8c"], 5: ["#b08fd0", "#6a4b8c"], 10: ["#e46a5f", "#8c2f28"],
+                   20: ["#f2c14e", "#9c7414"], 50: ["#e08a3c", "#8a4a12"], 100: ["#5f9ae0", "#244f8c"] };
+function desenharItem(i, t) {
+  const x = Math.round(i.x);
+  if (i.tipo === "moeda") {
+    const giro = [6, 4, 2, 4][Math.floor(t * 8 + i.fase * 4) % 4];
+    const ox = x + (6 - giro) / 2, y = Math.round(i.y);
+    ctx.fillStyle = "#3b200c"; ctx.fillRect(ox - 1, y - 1, giro + 2, 8);
+    ctx.fillStyle = "#9c7414"; ctx.fillRect(ox, y, giro, 6);
+    ctx.fillStyle = "#ffd23f"; ctx.fillRect(ox + (giro > 2 ? 1 : 0), y + 1, Math.max(1, giro - 2), 4);
+    if (giro === 6) { ctx.fillStyle = "#fff6e6"; ctx.fillRect(ox + 2, y + 1, 1, 2); }
+  } else {
+    const y = Math.round(i.y + Math.sin(t * 4 + i.fase) * 1.5);
+    const [claro, escuro] = COR_NOTA[i.valor];
+    if (i.valor >= 50 && Math.floor(t * 6) % 2 === 0) { ctx.fillStyle = "#ffffff"; ctx.fillRect(x - 1, y - 1, 14, 9); }
+    ctx.fillStyle = escuro; ctx.fillRect(x, y, 12, 7);
+    ctx.fillStyle = claro; ctx.fillRect(x + 1, y + 1, 10, 5);
+    ctx.fillStyle = escuro; ctx.fillRect(x + 5, y + 2, 2, 3);
+  }
+}
+function desenhar() {
+  const e = estado;
+  ctx.save();
+  if (e.tremor > 0) ctx.translate(Math.round((Math.random() - 0.5) * 4), Math.round((Math.random() - 0.5) * 3));
+  desenharCenario(e.scroll);
+  for (const i of e.itens) desenharItem(i, e.t + (e.tempoCaptura || 0));
+  for (const o of e.obstaculos) desenharObstaculo(o);
+
+  const passo = Math.floor(e.scroll / 14) % 2;
+  ctx.drawImage(IMG.larapio[e.modo === "capturado" ? 0 : passo], Math.round(e.larapio.x), GROUND - 24);
+
+  const j = e.jogador;
+  const pisca = j.invencivel > 0 && Math.floor(j.invencivel * 12) % 2 === 0;
+  if (!pisca) ctx.drawImage(IMG.tigre[j.noChao ? passo : 0], Math.round(j.x), Math.round(j.y) - 20);
+
+  ctx.fillStyle = "#ffd23f";
+  for (const p of e.particulas) ctx.fillRect(Math.round(p.x), Math.round(p.y), 3, 3);
+  ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = "center";
+  for (const t of e.textos) {
+    ctx.globalAlpha = Math.min(1, t.vida * 2);
+    ctx.fillStyle = "#1a0f2e"; ctx.fillText(t.txt, Math.round(t.x) + 1, Math.round(t.y) + 1);
+    ctx.fillStyle = t.cor; ctx.fillText(t.txt, Math.round(t.x), Math.round(t.y));
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+/* ===== HUD e telas ===== */
+const $ = id => document.getElementById(id);
+const spansMedidor = [...$("meter").children];
+let ultimoHud = "";
+function atualizarHud() {
+  const txt = brl.format(estado.dinheiro) + "|" + estado.tropecos;
+  if (txt === ultimoHud) return;
+  ultimoHud = txt;
+  $("money").textContent = brl.format(estado.dinheiro);
+  $("bestHud").textContent = "Recorde " + brl.format(recorde);
+  spansMedidor.forEach((s, i) => s.classList.toggle("on", i < estado.tropecos));
+}
+function mostrarTela(id) {
+  ["startScreen", "pauseScreen", "overScreen"].forEach(t => $(t).classList.toggle("hidden", t !== id));
+}
+function comecar() { novoJogo(); ultimoHud = ""; mostrarTela(null); }
+function pausar() { if (estado && estado.modo === "jogando") { estado.modo = "pausado"; mostrarTela("pauseScreen"); $("resumeBtn").focus(); } }
+function continuar() { if (estado && estado.modo === "pausado") { estado.modo = "jogando"; mostrarTela(null); } }
+
+$("startBtn").addEventListener("click", comecar);
+$("againBtn").addEventListener("click", comecar);
+$("resumeBtn").addEventListener("click", continuar);
+$("startBest").textContent = recorde > 0 ? "Seu recorde: " + brl.format(recorde) : "";
+
+/* ===== Teclado ===== */
+const MAPA = { ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right",
+               ArrowUp: "jump", KeyW: "jump", Space: "jump" };
+window.addEventListener("keydown", ev => {
+  const jogando = estado && estado.modo === "jogando";
+  if (ev.code === "KeyP" || ev.code === "Escape") { jogando ? pausar() : continuar(); return; }
+  if (MAPA[ev.code] && jogando) { ev.preventDefault(); setTecla(MAPA[ev.code], true); }
+});
+window.addEventListener("keyup", ev => { if (MAPA[ev.code]) setTecla(MAPA[ev.code], false); });
+window.addEventListener("blur", () => { input.left = input.right = input.jump = false; });
+document.addEventListener("visibilitychange", () => { if (document.hidden) pausar(); });
+
+/* ===== Toque ===== */
+document.querySelectorAll(".pad").forEach(btn => {
+  const nome = btn.dataset.key;
+  const on = ev => { ev.preventDefault(); btn.setPointerCapture?.(ev.pointerId); btn.classList.add("pressed"); setTecla(nome, true); };
+  const off = () => { btn.classList.remove("pressed"); setTecla(nome, false); };
+  btn.addEventListener("pointerdown", on);
+  btn.addEventListener("pointerup", off);
+  btn.addEventListener("pointercancel", off);
+  btn.addEventListener("lostpointercapture", off);
+  btn.addEventListener("contextmenu", ev => ev.preventDefault());
+});
+
+/* ===== Laço principal ===== */
+novoJogo(); estado.modo = "inicio";
+let anterior = performance.now();
+function laco(agora) {
+  const dt = Math.min(0.05, (agora - anterior) / 1000);
+  anterior = agora;
+  if (estado.modo === "jogando" || estado.modo === "capturado") atualizar(dt);
+  else if (estado.modo === "inicio") estado.scroll += 30 * dt; // cenário andando na tela inicial
+  desenhar();
+  atualizarHud();
+  requestAnimationFrame(laco);
+}
+(document.fonts ? document.fonts.ready : Promise.resolve()).then(() => requestAnimationFrame(laco));
+</script>
+</body>
+</html>
